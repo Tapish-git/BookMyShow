@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>BookMyShow - Movie Ticket Booking</title>
+    <meta name="title" content="BookMyShow - Movie Ticket Booking" />
+    <meta name="description" content="Book movie tickets online with ease. Browse movies, select seats, and get instant confirmation." />
+    <meta name="keywords" content="movie tickets, cinema, booking, shows, entertainment" />
+    <meta name="author" content="Tapish Bagdi" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="BookMyShow Clone - Movie Ticket Booking" />
+    <meta property="og:description" content="Book movie tickets online with ease. Browse movies, select seats, and get instant confirmation." />
+    <meta property="og:url" content="/" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="BookMyShow Clone - Movie Ticket Booking" />
+    <meta property="twitter:description" content="Book movie tickets online with ease. Browse movies, select seats, and get instant confirmation." />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1976d2" />
+    
+    <!-- Performance and Security -->
+    <meta name="robots" content="index, follow" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    
+    <style>
+      /* Critical CSS - Loading state */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #f5f5f5;
+      }
+      
+      /* Loading spinner for initial page load */
+      .loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #ffffff;
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #1976d2;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Hide loading container when React takes over */
+      .app-loaded .loading-container {
+        display: none;
+      }
+      
+      /* Focus styles for accessibility */
+      button:focus,
+      a:focus,
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid #1976d2;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <!-- Root element for React app -->
+    <div id="root">
+      <!-- Loading spinner shown while app loads -->
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+    
+    <!-- React app script -->
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- No-script fallback -->
+    <noscript>
+      <div style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #f5f5f5;
+      ">
+        <div>
+          <h1 style="color: #1976d2; margin-bottom: 16px;">JavaScript Required</h1>
+          <p style="color: #666; margin-bottom: 24px;">
+            This application requires JavaScript to run properly.
+          </p>
+          <p style="color: #666; font-size: 14px;">
+            Please enable JavaScript in your browser settings and refresh the page.
+          </p>
+        </div>
+      </div>
+    </noscript>
+    
+    <!-- Service Worker Registration (for PWA features) -->
+    <script>
+      // Register service worker for caching and offline support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+      
+      // Remove loading spinner when app starts
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          document.body.classList.add('app-loaded');
+        }, 100);
+      });
+    </script>
+  </body>
+</html>

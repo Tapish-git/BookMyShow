@@ -1,0 +1,443 @@
+# BookMyShow API Integration Tests
+# VS Code REST Client Extension Required
+# Install: ms-vscode.vscode-restclient
+
+# =============================================
+# ENVIRONMENT VARIABLES
+# =============================================
+@baseUrl = http://localhost:3000/api
+@frontendUrl = http://localhost:5173
+
+# Test user credentials (from seed data)
+@testEmail = test@bookmyshow.com
+@testPassword = password123
+
+# =============================================
+# HEALTH CHECK
+# =============================================
+
+### Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### Server Status
+GET {{baseUrl}}/status
+Accept: application/json
+
+# =============================================
+# MOVIES API TESTS
+# =============================================
+
+### Get All Movies
+GET {{baseUrl}}/movies
+Accept: application/json
+
+### Get Movie by ID
+GET {{baseUrl}}/movies/1
+Accept: application/json
+
+### Get Movie by Invalid ID
+GET {{baseUrl}}/movies/999
+Accept: application/json
+
+### Get Movies with Query Parameters
+GET {{baseUrl}}/movies?language=English&limit=5
+Accept: application/json
+
+### Search Movies by Title
+GET {{baseUrl}}/movies?search=avengers
+Accept: application/json
+
+# =============================================
+# THEATERS API TESTS
+# =============================================
+
+### Get All Theaters
+GET {{baseUrl}}/theaters
+Accept: application/json
+
+### Get Theater by ID
+GET {{baseUrl}}/theaters/1
+Accept: application/json
+
+### Get Theaters by City
+GET {{baseUrl}}/theaters?city=Mumbai
+Accept: application/json
+
+### Get Theater with Invalid ID
+GET {{baseUrl}}/theaters/999
+Accept: application/json
+
+# =============================================
+# SHOWS API TESTS
+# =============================================
+
+### Get All Shows
+GET {{baseUrl}}/shows
+Accept: application/json
+
+### Get Shows by Movie ID
+GET {{baseUrl}}/shows?movieId=1
+Accept: application/json
+
+### Get Shows by Theater ID
+GET {{baseUrl}}/shows?theaterId=1
+Accept: application/json
+
+### Get Shows by Date Range
+GET {{baseUrl}}/shows?startDate=2024-12-12&endDate=2024-12-15
+Accept: application/json
+
+### Get Show by ID with Details
+GET {{baseUrl}}/shows/1
+Accept: application/json
+
+### Get Shows with Multiple Filters
+GET {{baseUrl}}/shows?movieId=1&city=Mumbai&date=2024-12-12
+Accept: application/json
+
+# =============================================
+# SEATS API TESTS
+# =============================================
+
+### Get Seats for a Show
+GET {{baseUrl}}/shows/1/seats
+Accept: application/json
+
+### Get Seat Layout for Theater
+GET {{baseUrl}}/theaters/1/seats
+Accept: application/json
+
+### Get Available Seats for Show
+GET {{baseUrl}}/shows/1/seats?available=true
+Accept: application/json
+
+# =============================================
+# USER REGISTRATION & AUTHENTICATION
+# =============================================
+
+### Register New User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User API",
+  "email": "apitest@bookmyshow.com",
+  "phone": "9888888888",
+  "password": "testpassword123"
+}
+
+### Login User
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Login with Invalid Credentials
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "invalid@email.com",
+  "password": "wrongpassword"
+}
+
+# =============================================
+# BOOKING FLOW TESTS
+# (Note: These require authentication session)
+# =============================================
+
+### Create Seat Reservation
+POST {{baseUrl}}/reservations
+Content-Type: application/json
+# Session required
+
+{
+  "showId": 1,
+  "seatIds": [1, 2],
+  "userId": 1
+}
+
+### Get User Reservations
+GET {{baseUrl}}/reservations/user/1
+Accept: application/json
+# Session required
+
+### Create Booking
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+# Session required
+
+{
+  "showId": 1,
+  "seatIds": [3, 4],
+  "userId": 1,
+  "totalAmount": 500.00
+}
+
+### Get User Bookings
+GET {{baseUrl}}/users/1/bookings
+Accept: application/json
+# Session required
+
+### Get Booking Details
+GET {{baseUrl}}/bookings/1
+Accept: application/json
+# Session required
+
+### Update Booking Status
+PUT {{baseUrl}}/bookings/1/status
+Content-Type: application/json
+# Session required
+
+{
+  "status": "confirmed",
+  "paymentStatus": "completed"
+}
+
+# =============================================
+# ERROR HANDLING TESTS
+# =============================================
+
+### Test Rate Limiting (Make multiple rapid requests)
+GET {{baseUrl}}/movies
+Accept: application/json
+
+###
+GET {{baseUrl}}/movies
+
+###
+GET {{baseUrl}}/movies
+
+###
+GET {{baseUrl}}/movies
+
+###
+GET {{baseUrl}}/movies
+
+### Test Invalid JSON
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@email.com"
+  "password": "missing comma above"
+}
+
+### Test Missing Required Fields
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@email.com"
+}
+
+### Test SQL Injection Attempt
+GET {{baseUrl}}/movies/1'; DROP TABLE movies; --
+Accept: application/json
+
+### Test XSS Attempt
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "<script>alert('xss')</script>",
+  "email": "xss@test.com",
+  "password": "password123"
+}
+
+# =============================================
+# PERFORMANCE TESTS
+# =============================================
+
+### Load Test - Multiple Concurrent Requests
+# Run these simultaneously to test concurrency
+
+### Request 1
+GET {{baseUrl}}/shows?movieId=1
+Accept: application/json
+
+### Request 2  
+GET {{baseUrl}}/shows?theaterId=1
+Accept: application/json
+
+### Request 3
+GET {{baseUrl}}/movies
+Accept: application/json
+
+### Request 4
+GET {{baseUrl}}/theaters
+Accept: application/json
+
+# =============================================
+# EDGE CASES
+# =============================================
+
+### Booking Expired Reservation
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "showId": 999,
+  "seatIds": [999],
+  "userId": 1,
+  "totalAmount": 0.00
+}
+
+### Double Booking Same Seats
+POST {{baseUrl}}/reservations
+Content-Type: application/json
+
+{
+  "showId": 1,
+  "seatIds": [1, 2],
+  "userId": 2
+}
+
+### Booking Past Show
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "showId": 1,
+  "seatIds": [5, 6],
+  "userId": 1,
+  "totalAmount": 500.00,
+  "showTime": "2020-01-01T10:00:00Z"
+}
+
+# =============================================
+# INTEGRATION SCENARIOS
+# =============================================
+
+### Complete Booking Flow Test
+# 1. Get available shows
+GET {{baseUrl}}/shows?movieId=1&date=2024-12-13
+Accept: application/json
+
+### 2. Check available seats for selected show
+GET {{baseUrl}}/shows/7/seats?available=true
+Accept: application/json
+
+### 3. Reserve seats (requires session)
+POST {{baseUrl}}/reservations
+Content-Type: application/json
+
+{
+  "showId": 7,
+  "seatIds": [15, 16],
+  "userId": 1
+}
+
+### 4. Create booking (requires session)
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "showId": 7,
+  "seatIds": [15, 16],
+  "userId": 1,
+  "totalAmount": 540.00
+}
+
+### 5. Confirm payment (requires session)
+PUT {{baseUrl}}/bookings/7/status
+Content-Type: application/json
+
+{
+  "status": "confirmed",
+  "paymentStatus": "completed"
+}
+
+# =============================================
+# DATABASE CONSISTENCY TESTS
+# =============================================
+
+### Check Show Availability After Booking
+GET {{baseUrl}}/shows/1
+Accept: application/json
+
+### Check Seat Reservations
+GET {{baseUrl}}/reservations/show/1
+Accept: application/json
+
+### Verify Booking Seats Relationship
+GET {{baseUrl}}/bookings/1/seats
+Accept: application/json
+
+# =============================================
+# API RESPONSE VALIDATION
+# =============================================
+
+### Validate Movie Response Structure
+GET {{baseUrl}}/movies/1
+Accept: application/json
+
+# Expected Response:
+# {
+#   "id": 1,
+#   "title": "string",
+#   "description": "string",
+#   "duration": number,
+#   "language": "string", 
+#   "genre": "string",
+#   "rating": number,
+#   "release_date": "date",
+#   "poster_url": "string",
+#   "trailer_url": "string",
+#   "is_active": boolean,
+#   "created_at": "timestamp",
+#   "updated_at": "timestamp"
+# }
+
+### Validate Shows Response with Relations
+GET {{baseUrl}}/shows/1
+Accept: application/json
+
+# Expected Response:
+# {
+#   "id": 1,
+#   "movie_id": number,
+#   "theater_id": number,
+#   "show_time": "datetime",
+#   "price": number,
+#   "available_seats": number,
+#   "total_seats": number,
+#   "movie": { movie object },
+#   "theater": { theater object }
+# }
+
+# =============================================
+# CLEANUP TESTS
+# =============================================
+
+### Expire Old Reservations (Cleanup job simulation)
+DELETE {{baseUrl}}/reservations/expired
+Accept: application/json
+
+### Cancel Expired Bookings
+PUT {{baseUrl}}/bookings/cleanup-expired
+Content-Type: application/json
+
+# =============================================
+# NOTES FOR TESTING
+# =============================================
+
+# 1. Start the backend server: npm run dev (in backend directory)
+# 2. Ensure MySQL is running with seeded data
+# 3. Install REST Client extension in VS Code
+# 4. Run tests in order for dependent operations
+# 5. Some tests require authentication - run login first
+# 6. Check server logs for detailed error information
+# 7. Use browser DevTools Network tab for frontend integration
+# 8. Monitor database state during booking flow tests
+
+# Test Results Log:
+# - Date: 
+# - Environment: Development
+# - Pass/Fail Status: 
+# - Notes: 
