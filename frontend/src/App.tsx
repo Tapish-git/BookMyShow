@@ -43,7 +43,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
       retry: (failureCount, error: any) => {
         // Don't retry on 4xx errors
         if (error?.status >= 400 && error?.status < 500) {
@@ -181,7 +181,7 @@ const AppErrorFallback: React.FC<{ error: Error; resetErrorBoundary: () => void 
   error,
   resetErrorBoundary,
 }) => (
-  <ErrorFallback 
+  <ErrorFallback
     error={error}
     resetErrorBoundary={resetErrorBoundary}
     title="Application Error"
@@ -199,7 +199,7 @@ const App: React.FC = () => {
       onError={(error, errorInfo) => {
         // Log error to console in development
         console.error('Application Error:', error, errorInfo);
-        
+
         // In production, you would send this to an error tracking service
         // Example: Sentry.captureException(error);
       }}
@@ -218,7 +218,7 @@ const App: React.FC = () => {
               >
                 {/* Header */}
                 <Header />
-                
+
                 {/* Main Content */}
                 <Box
                   component="main"
@@ -231,34 +231,34 @@ const App: React.FC = () => {
                     <Routes>
                       {/* Home */}
                       <Route path="/" element={<HomePage />} />
-                      
+
                       {/* Movies */}
                       <Route path="/movies" element={<MoviesPage />} />
                       <Route path="/movies/:id" element={<MovieDetailsPage />} />
-                      
+
                       {/* Shows */}
                       <Route path="/shows/:id" element={<ShowDetailsPage />} />
-                      
+
                       {/* Booking Flow */}
                       <Route path="/shows/:showId/seats" element={<SeatSelectionPage />} />
                       <Route path="/booking" element={<BookingPage />} />
                       <Route path="/booking/confirmation/:reference" element={<BookingConfirmationPage />} />
-                      
+
                       {/* User Bookings */}
                       <Route path="/my-bookings" element={<MyBookingsPage />} />
-                      
+
                       {/* 404 */}
                       <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                   </React.Suspense>
                 </Box>
-                
+
                 {/* Footer */}
                 <Footer />
               </Box>
             </Router>
           </BookingProvider>
-          
+
           {/* Toast Notifications */}
           <Toaster
             position="top-right"

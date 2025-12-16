@@ -9,19 +9,19 @@
  */
 
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
-import { 
-  ApiResponse, 
-  ApiError, 
-  MoviesResponse, 
-  MovieWithShows, 
-  ShowsResponse, 
-  ShowDetails, 
-  SeatLayoutResponse, 
-  BlockSeatsRequest, 
-  BlockSeatsResponse, 
-  CreateBookingRequest, 
-  CreateBookingResponse, 
-  BookingDetails, 
+import {
+  ApiResponse,
+  ApiError,
+  MoviesResponse,
+  MovieWithShows,
+  ShowsResponse,
+  ShowDetails,
+  SeatLayoutResponse,
+  BlockSeatsRequest,
+  BlockSeatsResponse,
+  CreateBookingRequest,
+  CreateBookingResponse,
+  BookingDetails,
   UserBookingsResponse,
   HealthCheck,
   BookingStats,
@@ -31,7 +31,7 @@ import {
 } from '@/types/api';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api/v1';
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 /**
@@ -51,13 +51,13 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     (config) => {
       // Log outgoing requests in development
-      if (import.meta.env.DEV) {
+      if (process.env.NODE_ENV === 'development') {
         console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
           params: config.params,
           data: config.data,
         });
       }
-      
+
       return config;
     },
     (error) => {
@@ -70,13 +70,13 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       // Log successful responses in development
-      if (import.meta.env.DEV) {
+      if (process.env.NODE_ENV === 'development') {
         console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
           status: response.status,
           data: response.data,
         });
       }
-      
+
       return response;
     },
     (error: AxiosError) => {
@@ -140,13 +140,13 @@ const apiClient = createApiClient();
  */
 const buildQueryParams = (params: QueryParams): string => {
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
       searchParams.append(key, String(value));
     }
   });
-  
+
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : '';
 };
@@ -159,7 +159,7 @@ export const movieApi = {
    * Get all movies with optional filtering
    */
   getMovies: async (filters: MovieFilters = {}): Promise<MoviesResponse> => {
-    const queryParams = buildQueryParams(filters);
+    const queryParams = buildQueryParams(filters as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<MoviesResponse>>(`/movies${queryParams}`);
     return response.data.data;
   },
@@ -176,7 +176,7 @@ export const movieApi = {
    * Search movies by title
    */
   searchMovies: async (query: string, page = 1, limit = 10) => {
-    const queryParams = buildQueryParams({ q: query, page, limit });
+    const queryParams = buildQueryParams({ q: query, page, limit } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<MoviesResponse>>(`/movies/search${queryParams}`);
     return response.data.data;
   },
@@ -185,7 +185,7 @@ export const movieApi = {
    * Get currently showing movies
    */
   getNowShowingMovies: async (page = 1, limit = 20) => {
-    const queryParams = buildQueryParams({ page, limit });
+    const queryParams = buildQueryParams({ page, limit } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<MoviesResponse>>(`/movies/now-showing${queryParams}`);
     return response.data.data;
   },
@@ -194,7 +194,7 @@ export const movieApi = {
    * Get movies by genre
    */
   getMoviesByGenre: async (genre: string, page = 1, limit = 12) => {
-    const queryParams = buildQueryParams({ page, limit });
+    const queryParams = buildQueryParams({ page, limit } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<MoviesResponse>>(`/movies/genre/${genre}${queryParams}`);
     return response.data.data;
   },
@@ -208,7 +208,7 @@ export const showApi = {
    * Get all shows with optional filtering
    */
   getShows: async (filters: ShowFilters = {}): Promise<ShowsResponse> => {
-    const queryParams = buildQueryParams(filters);
+    const queryParams = buildQueryParams(filters as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<ShowsResponse>>(`/shows${queryParams}`);
     return response.data.data;
   },
@@ -225,7 +225,7 @@ export const showApi = {
    * Get shows by movie ID
    */
   getShowsByMovie: async (movieId: string, date?: string) => {
-    const queryParams = buildQueryParams({ date });
+    const queryParams = buildQueryParams({ date } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<any>>(`/shows/movie/${movieId}${queryParams}`);
     return response.data.data;
   },
@@ -234,7 +234,7 @@ export const showApi = {
    * Get shows in date range
    */
   getShowsByDateRange: async (startDate: string, endDate: string, movieId?: string) => {
-    const queryParams = buildQueryParams({ startDate, endDate, movieId });
+    const queryParams = buildQueryParams({ startDate, endDate, movieId } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<any>>(`/shows/date-range${queryParams}`);
     return response.data.data;
   },
@@ -248,7 +248,7 @@ export const seatApi = {
    * Get seat layout for a show
    */
   getSeatLayout: async (showId: string, availableOnly = false): Promise<SeatLayoutResponse> => {
-    const queryParams = buildQueryParams({ availableOnly });
+    const queryParams = buildQueryParams({ availableOnly } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<SeatLayoutResponse>>(`/seats/layout/${showId}${queryParams}`);
     return response.data.data;
   },
@@ -257,7 +257,7 @@ export const seatApi = {
    * Get available seats for a show
    */
   getAvailableSeats: async (showId: string, count?: number) => {
-    const queryParams = buildQueryParams({ count });
+    const queryParams = buildQueryParams({ count } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<any>>(`/seats/available/${showId}${queryParams}`);
     return response.data.data;
   },
@@ -314,7 +314,7 @@ export const bookingApi = {
    * Get user bookings by email
    */
   getUserBookings: async (email: string, page = 1, limit = 10): Promise<UserBookingsResponse> => {
-    const queryParams = buildQueryParams({ page, limit });
+    const queryParams = buildQueryParams({ page, limit } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<UserBookingsResponse>>(`/bookings/user/${email}${queryParams}`);
     return response.data.data;
   },
@@ -333,7 +333,7 @@ export const bookingApi = {
    * Get booking statistics
    */
   getBookingStats: async (startDate?: string, endDate?: string): Promise<BookingStats> => {
-    const queryParams = buildQueryParams({ startDate, endDate });
+    const queryParams = buildQueryParams({ startDate, endDate } as unknown as QueryParams);
     const response = await apiClient.get<ApiResponse<BookingStats>>(`/bookings/stats${queryParams}`);
     return response.data.data;
   },
@@ -386,11 +386,11 @@ export const apiUtils = {
     if (apiUtils.isApiError(error)) {
       return error.error.message;
     }
-    
+
     if (error?.message) {
       return error.message;
     }
-    
+
     return 'An unexpected error occurred. Please try again.';
   },
 
@@ -417,31 +417,31 @@ export const apiUtils = {
     initialDelay = 1000
   ): Promise<T> => {
     let lastError: any;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await apiCall();
       } catch (error) {
         lastError = error;
-        
+
         // Don't retry on validation errors or client errors
-        if (apiUtils.isValidationError(error) || (error?.status >= 400 && error?.status < 500)) {
+        if (apiUtils.isValidationError(error) || ((error as any)?.status >= 400 && (error as any)?.status < 500)) {
           throw error;
         }
-        
+
         // Don't retry on last attempt
         if (attempt === maxRetries) {
           break;
         }
-        
+
         // Wait with exponential backoff
         const delay = initialDelay * Math.pow(2, attempt);
         await new Promise(resolve => setTimeout(resolve, delay));
-        
+
         console.log(`🔄 Retrying API call (attempt ${attempt + 2}/${maxRetries + 1}) after ${delay}ms`);
       }
     }
-    
+
     throw lastError;
   },
 };

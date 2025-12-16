@@ -250,6 +250,5 @@ This project demonstrates:
 
 ---
 
-### NOTE: I want to do all the stuff like setup, deployment and everything on a different laptop, so I want the codes (if any) or relevant required files for the setup of deployment on vercel, railway, docker, MySQL and planetScale and I want the steps to setup all these in a different laptop, and then deploy and run everything using a different laptop. So now proceed further like this. 
 
 *This project serves as a comprehensive learning experience in full-stack development, system design, and software engineering best practices. The intentional design limitations provide opportunities for meaningful discussions about scalability, performance, and production-ready systems.*
