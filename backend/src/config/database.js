@@ -12,6 +12,35 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 /**
+ * Parse DATABASE_URL if provided (for Railway, Heroku, etc.)
+ * Format: mysql://username:password@host:port/database
+ */
+function parseDatabaseUrl(url) {
+  if (!url) return null;
+
+  try {
+    const urlPattern = /^mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)$/;
+    const match = url.match(urlPattern);
+
+    if (match) {
+      return {
+        username: match[1],
+        password: match[2],
+        host: match[3],
+        port: parseInt(match[4], 10),
+        database: match[5],
+      };
+    }
+  } catch (error) {
+    console.error('Failed to parse DATABASE_URL:', error.message);
+  }
+
+  return null;
+}
+
+const databaseUrl = parseDatabaseUrl(process.env.DATABASE_URL);
+
+/**
  * Database configuration object for different environments
  * 
  * @description Contains connection settings for development, test, and production environments
@@ -49,11 +78,12 @@ const config = {
     },
   },
   production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
+    // Use DATABASE_URL if provided (Railway, Heroku), otherwise use individual vars
+    username: databaseUrl?.username || process.env.DB_USER,
+    password: databaseUrl?.password || process.env.DB_PASSWORD,
+    database: databaseUrl?.database || process.env.DB_NAME,
+    host: databaseUrl?.host || process.env.DB_HOST,
+    port: databaseUrl?.port || process.env.DB_PORT || 3306,
     dialect: 'mysql',
     logging: false, // Disable logging in production
     pool: {
@@ -100,14 +130,14 @@ try {
       logging: dbConfig.logging,
       pool: dbConfig.pool,
       dialectOptions: dbConfig.dialectOptions,
-      
+
       // Additional Sequelize options for better performance
       define: {
         timestamps: true,
         underscored: true,
         freezeTableName: true,
       },
-      
+
       // Timezone configuration
       timezone: '+05:30', // IST timezone for Indian users
     }
