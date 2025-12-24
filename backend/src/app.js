@@ -42,7 +42,8 @@ const app = express();
  */
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
+// Remove trailing slash from FRONTEND_URL to prevent CORS issues
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 /**
  * Trust proxy (important for deployment behind reverse proxy)
@@ -74,14 +75,14 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     // Allow frontend URL and localhost for development
     const allowedOrigins = [
       FRONTEND_URL,
       'http://localhost:3001',
       'http://localhost:3000',
     ];
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -116,13 +117,13 @@ app.use('/api/', limiter);
  * 
  * @description Parse incoming request bodies
  */
-app.use(express.json({ 
+app.use(express.json({
   limit: '10mb',
   type: 'application/json',
 }));
 
-app.use(express.urlencoded({ 
-  extended: true, 
+app.use(express.urlencoded({
+  extended: true,
   limit: '10mb',
 }));
 
@@ -242,14 +243,14 @@ const startServer = async () => {
   try {
     console.log('🚀 Starting BookMyShow Clone API Server...');
     console.log(`📊 Environment: ${NODE_ENV}`);
-    
+
     // Initialize database
     await initializeDatabase();
-    
+
     // Create session store table
     await sessionStore.sync();
     console.log('✅ Session store initialized');
-    
+
     // Start server
     const server = app.listen(PORT, () => {
       console.log(`🌐 Server running on port ${PORT}`);
@@ -265,10 +266,10 @@ const startServer = async () => {
      */
     const gracefulShutdown = (signal) => {
       console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
-      
+
       server.close(async () => {
         console.log('📴 HTTP server closed');
-        
+
         try {
           await sequelize.close();
           console.log('📴 Database connections closed');
@@ -279,7 +280,7 @@ const startServer = async () => {
           process.exit(1);
         }
       });
-      
+
       // Force shutdown after 30 seconds
       setTimeout(() => {
         console.error('⏰ Could not close connections in time, forcefully shutting down');
@@ -292,19 +293,31 @@ const startServer = async () => {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
     return server;
-    
+
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('❌ CRITICAL: Failed to start server');
+    console.error('Error message:', error.message);
+    console.error('Stack trace:', error.stack);
     process.exit(1);
   }
 };
+
+// Catch unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  process.exit(1);
+});
 
 // Export app for testing and server instance for direct execution
 module.exports = app;
 
 // Start server if this file is run directly
 if (require.main === module) {
-  startServer();
+  startServer().catch(error => {
+    console.error('❌ Fatal error during startup:', error);
+    process.exit(1);
+  });
 }
 
 /**

@@ -142,8 +142,19 @@ try {
       timezone: '+05:30', // IST timezone for Indian users
     }
   );
+
+  console.log(`✅ Sequelize initialized for ${env} environment`);
+  console.log(`📍 Database: ${dbConfig.database} at ${dbConfig.host}:${dbConfig.port}`);
 } catch (error) {
-  console.error('Failed to initialize database connection:', error.message);
+  console.error('❌ CRITICAL: Failed to initialize database connection:', error.message);
+  console.error('Stack trace:', error.stack);
+  console.error('Config:', {
+    env,
+    host: dbConfig?.host,
+    port: dbConfig?.port,
+    database: dbConfig?.database,
+    hasPassword: !!dbConfig?.password
+  });
   process.exit(1);
 }
 
