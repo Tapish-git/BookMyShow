@@ -389,7 +389,7 @@ Seat.getSeatLayout = async function(showId) {
       as: 'reservations',
       where: {
         reservation_status: {
-          [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+          [Op.in]: ['BLOCKED', 'CONFIRMED'],
         },
       },
       required: false, // Left join - include seats without reservations

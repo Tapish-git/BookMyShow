@@ -130,7 +130,7 @@ const createBooking = asyncHandler(async (req, res) => {
         show_id: showId,
         booking_status: 'CONFIRMED',
         created_at: {
-          [sequelize.Op.gte]: new Date(Date.now() - (10 * 60 * 1000)), // Last 10 minutes
+          [Op.gte]: new Date(Date.now() - (10 * 60 * 1000)), // Last 10 minutes
         },
       },
       transaction,

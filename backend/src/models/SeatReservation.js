@@ -168,7 +168,7 @@ const SeatReservation = sequelize.define('SeatReservation', {
       unique: true,
       where: {
         reservation_status: {
-          [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+          [Op.in]: ['BLOCKED', 'CONFIRMED'],
         },
       },
     },
@@ -425,7 +425,7 @@ SeatReservation.createBlock = async function(seatId, durationMinutes = 5) {
     where: {
       seat_id: seatId,
       reservation_status: {
-        [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+        [Op.in]: ['BLOCKED', 'CONFIRMED'],
       },
     },
   });
@@ -461,7 +461,7 @@ SeatReservation.findActiveBySeat = async function(seatId) {
     where: {
       seat_id: seatId,
       reservation_status: {
-        [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+        [Op.in]: ['BLOCKED', 'CONFIRMED'],
       },
     },
     order: [['created_at', 'DESC']], // Get most recent
