@@ -19,6 +19,7 @@ const {
 } = require('../middleware/errorHandler');
 const { logBusinessEvent, logPerformance, logSecurityEvent } = require('../middleware/logger');
 const { sequelize } = require('../config/database');
+const { Op } = require('sequelize');
 
 /**
  * Create a new booking
