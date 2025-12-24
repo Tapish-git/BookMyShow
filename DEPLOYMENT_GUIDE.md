@@ -442,7 +442,7 @@ Create `vercel.json` in frontend folder:
 ```env
 # API Configuration
 VITE_API_BASE_URL=https://your-railway-app.railway.app/api/v1
-VITE_APP_NAME=BookMyShow Clone
+VITE_APP_NAME=BookMyShow
 VITE_APP_VERSION=1.0.0
 ```
 
