@@ -12,35 +12,6 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 /**
- * Parse DATABASE_URL if provided (for Railway, Heroku, etc.)
- * Format: mysql://username:password@host:port/database
- */
-function parseDatabaseUrl(url) {
-  if (!url) return null;
-
-  try {
-    const urlPattern = /^mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)$/;
-    const match = url.match(urlPattern);
-
-    if (match) {
-      return {
-        username: match[1],
-        password: match[2],
-        host: match[3],
-        port: parseInt(match[4], 10),
-        database: match[5],
-      };
-    }
-  } catch (error) {
-    console.error('Failed to parse DATABASE_URL:', error.message);
-  }
-
-  return null;
-}
-
-const databaseUrl = parseDatabaseUrl(process.env.DATABASE_URL);
-
-/**
  * Database configuration object for different environments
  * 
  * @description Contains connection settings for development, test, and production environments
@@ -78,12 +49,13 @@ const config = {
     },
   },
   production: {
-    // Use DATABASE_URL if provided (Railway, Heroku), otherwise use individual vars
-    username: databaseUrl?.username || process.env.DB_USER,
-    password: databaseUrl?.password || process.env.DB_PASSWORD,
-    database: databaseUrl?.database || process.env.DB_NAME,
-    host: databaseUrl?.host || process.env.DB_HOST,
-    port: databaseUrl?.port || process.env.DB_PORT || 3306,
+    use_env_variable: 'DATABASE_URL',
+    // Fallback values if DATABASE_URL is not present
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
     dialect: 'mysql',
     logging: false, // Disable logging in production
     pool: {
@@ -119,37 +91,51 @@ const dbConfig = config[env];
 let sequelize;
 
 try {
-  sequelize = new Sequelize(
-    dbConfig.database,
-    dbConfig.username,
-    dbConfig.password,
-    {
-      host: dbConfig.host,
-      port: dbConfig.port,
-      dialect: dbConfig.dialect,
-      logging: dbConfig.logging,
-      pool: dbConfig.pool,
-      dialectOptions: dbConfig.dialectOptions,
+  const commonOptions = {
+    dialect: 'mysql',
+    logging: dbConfig.logging,
+    pool: dbConfig.pool,
+    dialectOptions: dbConfig.dialectOptions,
 
-      // Additional Sequelize options for better performance
-      define: {
-        timestamps: true,
-        underscored: true,
-        freezeTableName: true,
-      },
+    // Additional Sequelize options for better performance
+    define: {
+      timestamps: true,
+      underscored: true,
+      freezeTableName: true,
+    },
 
-      // Timezone configuration
-      timezone: '+05:30', // IST timezone for Indian users
-    }
-  );
+    // Timezone configuration
+    timezone: '+05:30', // IST timezone for Indian users
+  };
 
-  console.log(`✅ Sequelize initialized for ${env} environment`);
-  console.log(`📍 Database: ${dbConfig.database} at ${dbConfig.host}:${dbConfig.port}`);
+  // Check if we should use environment variable for connection string
+  if (dbConfig.use_env_variable && process.env[dbConfig.use_env_variable]) {
+    // Use connection string directly (e.g., for Railway)
+    sequelize = new Sequelize(process.env[dbConfig.use_env_variable], commonOptions);
+    console.log(`✅ Sequelize initialized for ${env} environment using ${dbConfig.use_env_variable}`);
+  } else {
+    // Use individual parameters
+    sequelize = new Sequelize(
+      dbConfig.database,
+      dbConfig.username,
+      dbConfig.password,
+      {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        ...commonOptions
+      }
+    );
+    console.log(`✅ Sequelize initialized for ${env} environment`);
+    console.log(`📍 Database: ${dbConfig.database} at ${dbConfig.host}:${dbConfig.port}`);
+  }
+
 } catch (error) {
   console.error('❌ CRITICAL: Failed to initialize database connection:', error.message);
   console.error('Stack trace:', error.stack);
   console.error('Config:', {
     env,
+    use_env_variable: dbConfig?.use_env_variable,
+    hasConnectionString: !!(dbConfig?.use_env_variable && process.env[dbConfig.use_env_variable]),
     host: dbConfig?.host,
     port: dbConfig?.port,
     database: dbConfig?.database,
