@@ -8,28 +8,56 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [app.js] File loading started...');
+
 const express = require('express');
+console.log('✅ [app.js] express loaded');
+
 const cors = require('cors');
+console.log('✅ [app.js] cors loaded');
+
 const helmet = require('helmet');
+console.log('✅ [app.js] helmet loaded');
+
 const rateLimit = require('express-rate-limit');
+console.log('✅ [app.js] express-rate-limit loaded');
+
 const session = require('express-session');
+console.log('✅ [app.js] express-session loaded');
+
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
+console.log('✅ [app.js] connect-session-sequelize loaded');
+
 require('dotenv').config();
+console.log('✅ [app.js] dotenv configured');
 
 // Import database connection and models
+console.log('🛠️ [app.js] About to load models...');
 const { sequelize, initializeDatabase, healthCheck } = require('./models');
+console.log('✅ [app.js] models loaded');
 
 // Import middleware
+console.log('🛠️ [app.js] About to load middleware...');
 const logger = require('./middleware/logger');
+console.log('✅ [app.js] logger loaded');
 const errorHandler = require('./middleware/errorHandler');
+console.log('✅ [app.js] errorHandler loaded');
 const requestValidator = require('./middleware/requestValidator');
+console.log('✅ [app.js] requestValidator loaded');
 
 // Import routes
+console.log('🛠️ [app.js] About to load routes...');
 const movieRoutes = require('./routes/movieRoutes');
+console.log('✅ [app.js] movieRoutes loaded');
 const showRoutes = require('./routes/showRoutes');
+console.log('✅ [app.js] showRoutes loaded');
 const seatRoutes = require('./routes/seatRoutes');
+console.log('✅ [app.js] seatRoutes loaded');
 const bookingRoutes = require('./routes/bookingRoutes');
+console.log('✅ [app.js] bookingRoutes loaded');
 const healthRoutes = require('./routes/healthRoutes');
+console.log('✅ [app.js] healthRoutes loaded');
+console.log('✅ [app.js] ALL MODULES LOADED SUCCESSFULLY!');
 
 /**
  * Create Express application instance
@@ -342,11 +370,18 @@ process.on('unhandledRejection', (reason, promise) => {
 module.exports = app;
 
 // Start server if this file is run directly
+console.log('🔧 [app.js] Checking if file is main module...');
+console.log('require.main === module:', require.main === module);
+
 if (require.main === module) {
+  console.log('✅ [app.js] File IS main module, calling startServer()...');
   startServer().catch(error => {
     console.error('❌ Fatal error during startup:', error);
+    console.error('Error stack:', error.stack);
     process.exit(1);
   });
+} else {
+  console.log('ℹ️ [app.js] File is NOT main module, exporting app only');
 }
 
 /**
