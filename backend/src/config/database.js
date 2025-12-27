@@ -155,7 +155,7 @@ try {
     database: dbConfig?.database,
     hasPassword: !!dbConfig?.password
   });
-  process.exit(1);
+  // process.exit(1);
 }
 
 /**
