@@ -92,7 +92,7 @@ const config = {
       acquire: 60000,
       idle: 10000,
     },
-    dialectOptions: {
+    dialectOptions: databaseUrl?.host?.includes('railway.internal') ? {} : {
       ssl: {
         require: true,
         rejectUnauthorized: false, // For cloud databases
