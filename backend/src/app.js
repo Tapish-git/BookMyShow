@@ -242,22 +242,50 @@ app.use(errorHandler.globalErrorHandler);
  */
 const startServer = async () => {
   try {
-    console.log('🚀 Starting BookMyShow Clone API Server...');
+    console.log('========================================');
+    console.log('🚀 STEP 1: Starting BookMyShow Clone API Server...');
     console.log(`📊 Environment: ${NODE_ENV}`);
+    console.log(`📍 PORT: ${PORT}`);
+    console.log(`📍 FRONTEND_URL: ${FRONTEND_URL}`);
+    console.log('========================================');
 
     // Initialize database
-    // await initializeDatabase();
+    console.log('🚀 STEP 2: About to call initializeDatabase()...');
+    try {
+      await initializeDatabase();
+      console.log('✅ STEP 2 COMPLETE: Database initialized successfully');
+    } catch (dbError) {
+      console.error('❌ STEP 2 FAILED: Database initialization error');
+      console.error('Error name:', dbError.name);
+      console.error('Error message:', dbError.message);
+      console.error('Error stack:', dbError.stack);
+      throw dbError;
+    }
 
     // Create session store table
-    // await sessionStore.sync();
-    console.log('✅ Session store initialized');
+    console.log('🚀 STEP 3: About to sync session store...');
+    try {
+      await sessionStore.sync();
+      console.log('✅ STEP 3 COMPLETE: Session store initialized');
+    } catch (sessionError) {
+      console.error('❌ STEP 3 FAILED: Session store sync error');
+      console.error('Error name:', sessionError.name);
+      console.error('Error message:', sessionError.message);
+      console.error('Error stack:', sessionError.stack);
+      throw sessionError;
+    }
 
     // Start server
+    console.log('🚀 STEP 4: About to start HTTP server...');
+    console.log(`Binding to 0.0.0.0:${PORT}...`);
     const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log('========================================');
+      console.log('✅ ✅ ✅ SERVER STARTED SUCCESSFULLY! ✅ ✅ ✅');
       console.log(`🌐 Server running on port ${PORT}`);
       console.log(`🔗 API Base URL: http://localhost:${PORT}/api/${API_VERSION}`);
       console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
       console.log(`📚 Welcome: http://localhost:${PORT}/`);
+      console.log('========================================');
     });
 
     /**
