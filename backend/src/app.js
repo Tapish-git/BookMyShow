@@ -10,6 +10,14 @@
 
 console.log('🔧 [app.js] File loading started...');
 
+process.on('uncaughtException', (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION:');
+  console.error('Name:', error.name);
+  console.error('Message:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+});
+
 const express = require('express');
 console.log('✅ [app.js] express loaded');
 
@@ -46,17 +54,66 @@ const requestValidator = require('./middleware/requestValidator');
 console.log('✅ [app.js] requestValidator loaded');
 
 // Import routes
+// console.log('🛠️ [app.js] About to load routes...');
+// const movieRoutes = require('./routes/movieRoutes');
+// console.log('✅ [app.js] movieRoutes loaded');
+// const showRoutes = require('./routes/showRoutes');
+// console.log('✅ [app.js] showRoutes loaded');
+// const seatRoutes = require('./routes/seatRoutes');
+// console.log('✅ [app.js] seatRoutes loaded');
+// const bookingRoutes = require('./routes/bookingRoutes');
+// console.log('✅ [app.js] bookingRoutes loaded');
+// const healthRoutes = require('./routes/healthRoutes');
+// console.log('✅ [app.js] healthRoutes loaded');
+
+// Import routes
 console.log('🛠️ [app.js] About to load routes...');
-const movieRoutes = require('./routes/movieRoutes');
-console.log('✅ [app.js] movieRoutes loaded');
-const showRoutes = require('./routes/showRoutes');
-console.log('✅ [app.js] showRoutes loaded');
-const seatRoutes = require('./routes/seatRoutes');
-console.log('✅ [app.js] seatRoutes loaded');
-const bookingRoutes = require('./routes/bookingRoutes');
-console.log('✅ [app.js] bookingRoutes loaded');
-const healthRoutes = require('./routes/healthRoutes');
-console.log('✅ [app.js] healthRoutes loaded');
+try {
+  const movieRoutes = require('./routes/movieRoutes');
+  console.log('✅ [app.js] movieRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load movieRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  const showRoutes = require('./routes/showRoutes');
+  console.log('✅ [app.js] showRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load showRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  const seatRoutes = require('./routes/seatRoutes');
+  console.log('✅ [app.js] seatRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load seatRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  const bookingRoutes = require('./routes/bookingRoutes');
+  console.log('✅ [app.js] bookingRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load bookingRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  const healthRoutes = require('./routes/healthRoutes');
+  console.log('✅ [app.js] healthRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load healthRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+
 console.log('✅ [app.js] ALL MODULES LOADED SUCCESSFULLY!');
 
 /**

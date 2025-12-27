@@ -11,7 +11,7 @@
 console.log('🔧 [showController.js] Loading...');
 const { Show, Movie, Seat } = require('../models');
 console.log('✅ [showController.js] Models loaded');
-const { asyncHandler, NotFoundError } = require('../middleware/errorHandler');
+const { asyncHandler, NotFoundError, BusinessLogicError } = require('../middleware/errorHandler');
 console.log('✅ [showController.js] Error handlers loaded');
 const { logBusinessEvent, logPerformance } = require('../middleware/logger');
 console.log('✅ [showController.js] Logger loaded');
