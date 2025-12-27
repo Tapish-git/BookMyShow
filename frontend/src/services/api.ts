@@ -31,7 +31,8 @@ import {
 } from '@/types/api';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://bookmyshow-production-f9f3.up.railway.app/api/v1";
+console.log("API BASE URL:", API_BASE_URL);
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 /**
