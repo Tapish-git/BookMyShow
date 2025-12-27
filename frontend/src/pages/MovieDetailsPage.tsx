@@ -15,18 +15,7 @@ import {
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { movieApi, showApi } from '@/services/api';
-
-interface Movie {
-    id: string;
-    title: string;
-    description: string;
-    poster_url: string;
-    genre: string;
-    rating: number;
-    duration: number;
-    language: string;
-    release_date: string;
-}
+import { MovieWithShows } from '@/types/api';
 
 interface Show {
     id: string;
@@ -42,7 +31,7 @@ const MovieDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
-    const [movie, setMovie] = useState<Movie | null>(null);
+    const [movie, setMovie] = useState<MovieWithShows | null>(null);
     const [shows, setShows] = useState<Show[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -109,7 +98,7 @@ const MovieDetailsPage: React.FC = () => {
                         <Card>
                             <CardMedia
                                 component="img"
-                                image={movie.poster_url || '/placeholder-movie.jpg'}
+                                image={movie.posterUrl || '/placeholder-movie.jpg'}
                                 alt={movie.title}
                                 sx={{ width: '100%', height: 'auto' }}
                             />
@@ -127,7 +116,7 @@ const MovieDetailsPage: React.FC = () => {
                                 <Chip label={movie.genre} color="primary" />
                                 <Chip label={movie.language} />
                                 <Chip label={`${movie.duration} mins`} />
-                                <Chip label={`⭐ ${movie.rating}/10`} color="secondary" />
+                                <Chip label={`⭐ ${movie.rating || 0}/10`} color="secondary" />
                             </Box>
 
                             <Typography variant="body1" paragraph>
@@ -135,7 +124,7 @@ const MovieDetailsPage: React.FC = () => {
                             </Typography>
 
                             <Typography variant="body2" color="text.secondary">
-                                Release Date: {new Date(movie.release_date).toLocaleDateString()}
+                                Release Date: {new Date(movie.releaseDate).toLocaleDateString()}
                             </Typography>
                         </Box>
                     </Grid>
