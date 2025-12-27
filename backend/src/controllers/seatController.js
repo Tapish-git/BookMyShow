@@ -8,17 +8,22 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [seatController.js] Loading...');
 const { Seat, Show, SeatReservation, Movie } = require('../models');
-const { 
-  asyncHandler, 
-  NotFoundError, 
+console.log('✅ [seatController.js] Models loaded');
+const {
+  asyncHandler,
+  NotFoundError,
   BusinessLogicError,
   ConflictError,
   createSeatConflictError,
-  createExpiredBlockError 
+  createExpiredBlockError
 } = require('../middleware/errorHandler');
+console.log('✅ [seatController.js] Error handlers loaded');
 const { logBusinessEvent, logPerformance, logSecurityEvent } = require('../middleware/logger');
+console.log('✅ [seatController.js] Logger loaded');
 const { sequelize } = require('../config/database');
+console.log('✅ [seatController.js] ALL IMPORTS COMPLETE!');
 
 /**
  * Get seat layout for a show
@@ -54,7 +59,7 @@ const getSeatLayout = asyncHandler(async (req, res) => {
 
     // Get seat layout with current availability
     const seatLayout = await Seat.getSeatLayout(showId);
-    
+
     // Filter by availability if requested
     let filteredLayout = seatLayout;
     if (availableOnly) {
@@ -211,19 +216,19 @@ const blockSeats = asyncHandler(async (req, res) => {
       if (reservation.reservation_status === 'CONFIRMED') {
         return true; // Confirmed reservations are always active
       }
-      
+
       if (reservation.reservation_status === 'BLOCKED') {
         return new Date() < reservation.expires_at; // Check if block hasn't expired
       }
-      
+
       return false;
     });
 
     if (activeReservations.length > 0) {
-      const conflictSeats = activeReservations.map(res => 
+      const conflictSeats = activeReservations.map(res =>
         `${res.seat.row_number}${res.seat.seat_number}`
       ).join(', ');
-      
+
       throw createSeatConflictError(
         conflictSeats,
         `Seats ${conflictSeats} are already reserved or blocked by another user`
@@ -232,7 +237,7 @@ const blockSeats = asyncHandler(async (req, res) => {
 
     // Block all seats atomically
     const blockedReservations = await SeatReservation.blockMultipleSeats(
-      seatIds, 
+      seatIds,
       blockDuration
     );
 
@@ -291,7 +296,7 @@ const blockSeats = asyncHandler(async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    
+
     logPerformance('blockSeats', Date.now() - startTime, {
       showId,
       seatCount: seatIds ? seatIds.length : 0,
@@ -307,7 +312,7 @@ const blockSeats = asyncHandler(async (req, res) => {
         userAgent: req.get('User-Agent'),
       }, req);
     }
-    
+
     throw error;
   }
 });
@@ -365,16 +370,16 @@ const releaseSeats = asyncHandler(async (req, res) => {
 
     // Group by show for efficient seat count updates
     const showUpdates = {};
-    
+
     // Release each reservation
     const releasedSeats = [];
     for (const reservation of blockedReservations) {
-      await reservation.update({ 
-        reservation_status: 'EXPIRED' 
+      await reservation.update({
+        reservation_status: 'EXPIRED'
       }, { transaction });
-      
-      await reservation.seat.update({ 
-        is_available: true 
+
+      await reservation.seat.update({
+        is_available: true
       }, { transaction });
 
       // Track show updates
@@ -430,12 +435,12 @@ const releaseSeats = asyncHandler(async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    
+
     logPerformance('releaseSeats', Date.now() - startTime, {
       seatCount: seatIds ? seatIds.length : 0,
       error: error.message,
     });
-    
+
     throw error;
   }
 });
@@ -564,7 +569,7 @@ const extendSeatBlock = asyncHandler(async (req, res) => {
     // Check if any blocks have expired
     const expiredReservations = reservations.filter(res => res.hasExpired());
     if (expiredReservations.length > 0) {
-      const expiredSeats = expiredReservations.map(res => 
+      const expiredSeats = expiredReservations.map(res =>
         res.seat.getSeatIdentifier()
       ).join(', ');
       throw createExpiredBlockError(expiredSeats);

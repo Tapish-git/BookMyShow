@@ -8,10 +8,15 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [showController.js] Loading...');
 const { Show, Movie, Seat } = require('../models');
+console.log('✅ [showController.js] Models loaded');
 const { asyncHandler, NotFoundError } = require('../middleware/errorHandler');
+console.log('✅ [showController.js] Error handlers loaded');
 const { logBusinessEvent, logPerformance } = require('../middleware/logger');
+console.log('✅ [showController.js] Logger loaded');
 const { Op } = require('sequelize');
+console.log('✅ [showController.js] ALL IMPORTS COMPLETE!');
 
 /**
  * Get all shows with optional filtering
@@ -32,22 +37,22 @@ const { Op } = require('sequelize');
  */
 const getAllShows = asyncHandler(async (req, res) => {
   const startTime = Date.now();
-  const { 
-    movieId, 
-    date, 
-    hallName, 
-    availableOnly = true, 
-    page = 1, 
-    limit = 10 
+  const {
+    movieId,
+    date,
+    hallName,
+    availableOnly = true,
+    page = 1,
+    limit = 10
   } = req.query;
 
   // Build filter conditions
   const whereConditions = {};
-  
+
   if (movieId) {
     whereConditions.movie_id = movieId;
   }
-  
+
   if (date) {
     whereConditions.show_date = date;
   } else {
@@ -56,11 +61,11 @@ const getAllShows = asyncHandler(async (req, res) => {
       [Op.gte]: new Date().toISOString().split('T')[0],
     };
   }
-  
+
   if (hallName) {
     whereConditions.hall_name = hallName;
   }
-  
+
   if (availableOnly) {
     whereConditions.available_seats = {
       [Op.gt]: 0,
@@ -191,7 +196,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
     let dateFilter = {
       [Op.gte]: new Date().toISOString().split('T')[0], // Today onwards
     };
-    
+
     if (date) {
       dateFilter = date;
     }
@@ -227,7 +232,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
       if (!showsByDate[dateKey]) {
         showsByDate[dateKey] = [];
       }
-      
+
       showsByDate[dateKey].push({
         id: show.id,
         time: show.show_time,
@@ -320,7 +325,7 @@ const getShowById = asyncHandler(async (req, res) => {
     // Get seat layout summary
     const seatLayout = await Seat.getSeatLayout(id);
     const allSeats = Object.values(seatLayout).flat();
-    
+
     const seatSummary = {
       totalSeats: allSeats.length,
       availableSeats: allSeats.filter(seat => seat.is_available).length,
@@ -416,7 +421,7 @@ const getShowsByDateRange = asyncHandler(async (req, res) => {
   // Validate date range
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   if (start > end) {
     throw new BusinessLogicError('startDate must be before or equal to endDate');
   }
