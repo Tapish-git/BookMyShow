@@ -151,7 +151,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: NODE_ENV === 'production', // Use secure cookies in production
+    // secure: NODE_ENV === 'production', // Use secure cookies in production
+    secure: false, // Use secure cookies in production
     httpOnly: true, // Prevent XSS
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax',
@@ -252,7 +253,7 @@ const startServer = async () => {
     console.log('✅ Session store initialized');
 
     // Start server
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🌐 Server running on port ${PORT}`);
       console.log(`🔗 API Base URL: http://localhost:${PORT}/api/${API_VERSION}`);
       console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
@@ -289,8 +290,8 @@ const startServer = async () => {
     };
 
     // Handle shutdown signals
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    // process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    // process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
     return server;
 
@@ -298,7 +299,7 @@ const startServer = async () => {
     console.error('❌ CRITICAL: Failed to start server');
     console.error('Error message:', error.message);
     console.error('Stack trace:', error.stack);
-    process.exit(1);
+    // process.exit(1);
   }
 };
 
@@ -306,7 +307,7 @@ const startServer = async () => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise);
   console.error('Reason:', reason);
-  process.exit(1);
+  // process.exit(1);
 });
 
 // Export app for testing and server instance for direct execution
