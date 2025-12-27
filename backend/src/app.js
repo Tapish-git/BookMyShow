@@ -353,7 +353,13 @@ const startServer = async () => {
     // Create session store table
     console.log('🚀 STEP 3: About to sync session store...');
     try {
-      await sessionStore.sync();
+      // sessionStore.sync() returns a promise when callback is not provided
+      await new Promise((resolve, reject) => {
+        sessionStore.sync({ force: false }, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
       console.log('✅ STEP 3 COMPLETE: Session store initialized');
     } catch (sessionError) {
       console.error('❌ STEP 3 FAILED: Session store sync error');
