@@ -350,24 +350,8 @@ const startServer = async () => {
       throw dbError;
     }
 
-    // Create session store table
-    console.log('🚀 STEP 3: About to sync session store...');
-    try {
-      // sessionStore.sync() returns a promise when callback is not provided
-      await new Promise((resolve, reject) => {
-        sessionStore.sync({ force: false }, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      console.log('✅ STEP 3 COMPLETE: Session store initialized');
-    } catch (sessionError) {
-      console.error('❌ STEP 3 FAILED: Session store sync error');
-      console.error('Error name:', sessionError.name);
-      console.error('Error message:', sessionError.message);
-      console.error('Error stack:', sessionError.stack);
-      throw sessionError;
-    }
+    // Session store will auto-create the table on first use
+    console.log('✅ STEP 3 COMPLETE: Session store configured (table will be created on first use)');
 
     // Start server
     console.log('🚀 STEP 4: About to start HTTP server...');
