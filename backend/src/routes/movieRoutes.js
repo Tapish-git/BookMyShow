@@ -15,7 +15,7 @@ console.log('✅ [movieRoutes.js] express loaded');
 
 const movieController = require('../controllers/movieController');
 console.log('✅ [movieRoutes.js] movieController loaded');
-const { validate, movieSchemas } = require('../middleware/requestValidator');
+const { validate, movieSchemas, commonSchemas } = require('../middleware/requestValidator');
 console.log('✅ [movieRoutes.js] requestValidator loaded');
 const { asyncHandler } = require('../middleware/errorHandler');
 console.log('✅ [movieRoutes.js] errorHandler loaded');
@@ -54,7 +54,7 @@ router.get('/',
  */
 router.get('/search',
   validate({
-    q: movieSchemas.commonSchemas.searchQuery,
+    q: commonSchemas.searchQuery,
     page: movieSchemas.getMoviesQuery.extract('page'),
     limit: movieSchemas.getMoviesQuery.extract('limit'),
   }, 'query'),
