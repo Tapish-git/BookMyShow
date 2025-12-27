@@ -171,7 +171,8 @@ app.use(cors({
       'http://localhost:3000',
     ];
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Check if origin is in allowed list OR is a Vercel preview deployment
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
