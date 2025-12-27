@@ -8,12 +8,21 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [movieRoutes.js] File loading started...');
+
 const express = require('express');
+console.log('✅ [movieRoutes.js] express loaded');
+
 const movieController = require('../controllers/movieController');
+console.log('✅ [movieRoutes.js] movieController loaded');
 const { validate, movieSchemas } = require('../middleware/requestValidator');
+console.log('✅ [movieRoutes.js] requestValidator loaded');
 const { asyncHandler } = require('../middleware/errorHandler');
+console.log('✅ [movieRoutes.js] errorHandler loaded');
 
 const router = express.Router();
+console.log('✅ [movieRoutes.js] Router created');
+console.log('🎉 [movieRoutes.js] ALL IMPORTS SUCCESSFUL!');
 
 /**
  * @route GET /api/v1/movies
@@ -82,7 +91,7 @@ router.get('/now-showing',
 router.get('/genre/:genre',
   validate({
     genre: require('joi').string().valid(
-      'Action', 'Comedy', 'Drama', 'Horror', 'Romance', 
+      'Action', 'Comedy', 'Drama', 'Horror', 'Romance',
       'Sci-Fi', 'Thriller', 'Adventure', 'Animation', 'Family'
     ).required(),
   }, 'params'),
