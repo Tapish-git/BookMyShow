@@ -68,8 +68,11 @@ console.log('✅ [app.js] requestValidator loaded');
 
 // Import routes
 console.log('🛠️ [app.js] About to load routes...');
+
+let movieRoutes, showRoutes, seatRoutes, bookingRoutes, healthRoutes;
+
 try {
-  const movieRoutes = require('./routes/movieRoutes');
+  movieRoutes = require('./routes/movieRoutes');
   console.log('✅ [app.js] movieRoutes loaded');
 } catch (error) {
   console.error('❌ [app.js] FAILED to load movieRoutes:', error.message);
@@ -78,7 +81,7 @@ try {
 }
 
 try {
-  const showRoutes = require('./routes/showRoutes');
+  showRoutes = require('./routes/showRoutes');
   console.log('✅ [app.js] showRoutes loaded');
 } catch (error) {
   console.error('❌ [app.js] FAILED to load showRoutes:', error.message);
@@ -87,7 +90,7 @@ try {
 }
 
 try {
-  const seatRoutes = require('./routes/seatRoutes');
+  seatRoutes = require('./routes/seatRoutes');
   console.log('✅ [app.js] seatRoutes loaded');
 } catch (error) {
   console.error('❌ [app.js] FAILED to load seatRoutes:', error.message);
@@ -96,7 +99,7 @@ try {
 }
 
 try {
-  const bookingRoutes = require('./routes/bookingRoutes');
+  bookingRoutes = require('./routes/bookingRoutes');
   console.log('✅ [app.js] bookingRoutes loaded');
 } catch (error) {
   console.error('❌ [app.js] FAILED to load bookingRoutes:', error.message);
@@ -105,7 +108,7 @@ try {
 }
 
 try {
-  const healthRoutes = require('./routes/healthRoutes');
+  healthRoutes = require('./routes/healthRoutes');
   console.log('✅ [app.js] healthRoutes loaded');
 } catch (error) {
   console.error('❌ [app.js] FAILED to load healthRoutes:', error.message);
