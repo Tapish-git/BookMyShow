@@ -12,6 +12,7 @@ const express = require('express');
 const seatController = require('../controllers/seatController');
 const { validate, seatSchemas, customRateLimit } = require('../middleware/requestValidator');
 const { asyncHandler } = require('../middleware/errorHandler');
+const Joi = require('joi');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ const router = express.Router();
  */
 router.get('/layout/:showId',
   validate({
-    showId: seatSchemas.blockSeatsBody.extract('showId'),
+    showId: Joi.string().uuid().required(),
   }, 'params'),
   validate({
     availableOnly: require('joi').boolean().default(false),
@@ -47,7 +48,7 @@ router.get('/layout/:showId',
  */
 router.get('/available/:showId',
   validate({
-    showId: seatSchemas.blockSeatsBody.extract('showId'),
+    showId: Joi.string().uuid().required(),
   }, 'params'),
   validate({
     count: require('joi').number().integer().min(1).max(100).optional(),
@@ -122,8 +123,8 @@ router.patch('/extend-block',
     keyGenerator: (req) => `extend:${req.ip}`,
   }),
   validate({
-    seatIds: seatSchemas.releaseSeatsBody.extract('seatIds'),
-    additionalMinutes: require('joi').number().integer().min(1).max(10).default(5),
+    seatIds: Joi.array().items(Joi.string().uuid()).min(1).max(10).required(),
+    additionalMinutes: Joi.number().integer().min(1).max(10).default(5),
   }, 'body'),
   asyncHandler(seatController.extendSeatBlock)
 );
@@ -138,7 +139,7 @@ router.patch('/extend-block',
  */
 router.get('/:showId',
   validate({
-    showId: seatSchemas.blockSeatsBody.extract('showId'),
+    showId: Joi.string().uuid().required(),
   }, 'params'),
   validate({
     availableOnly: require('joi').boolean().default(false),
