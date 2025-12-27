@@ -74,8 +74,8 @@ router.get('/search',
  */
 router.get('/now-showing',
   validate({
-    page: movieSchemas.getMoviesQuery.extract('page'),
-    limit: movieSchemas.getMoviesQuery.extract('limit'),
+    page: Joi.number().integer().min(1).default(1).optional(),
+    limit: Joi.number().integer().min(1).default(20).optional(),
   }, 'query'),
   asyncHandler(movieController.getNowShowingMovies)
 );
@@ -98,8 +98,8 @@ router.get('/genre/:genre',
     ).required(),
   }, 'params'),
   validate({
-    page: movieSchemas.getMoviesQuery.extract('page'),
-    limit: movieSchemas.getMoviesQuery.extract('limit'),
+    page: Joi.number().integer().min(1).default(1).optional(),
+    limit: Joi.number().integer().min(1).default(12).optional(),
   }, 'query'),
   asyncHandler(movieController.getMoviesByGenre)
 );
