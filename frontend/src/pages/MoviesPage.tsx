@@ -70,7 +70,20 @@ const MoviesPage: React.FC = () => {
                     <Grid container spacing={3} sx={{ mt: 2 }}>
                         {movies.map((movie) => (
                             <Grid item xs={12} sm={6} md={4} lg={3} key={movie.id}>
-                                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <Card
+                                    sx={{
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            transform: 'scale(1.02)',
+                                            boxShadow: 6,
+                                            transition: 'all 0.3s ease'
+                                        }
+                                    }}
+                                    onClick={() => window.location.href = `/movies/${movie.id}`}
+                                >
                                     <CardMedia
                                         component="img"
                                         height="400"
