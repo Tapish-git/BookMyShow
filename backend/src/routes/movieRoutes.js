@@ -20,6 +20,8 @@ console.log('✅ [movieRoutes.js] requestValidator loaded');
 const { asyncHandler } = require('../middleware/errorHandler');
 console.log('✅ [movieRoutes.js] errorHandler loaded');
 
+const Joi = require('joi');
+
 const router = express.Router();
 console.log('✅ [movieRoutes.js] Router created');
 console.log('🎉 [movieRoutes.js] ALL IMPORTS SUCCESSFUL!');
@@ -55,8 +57,8 @@ router.get('/',
 router.get('/search',
   validate({
     q: commonSchemas.searchQuery,
-    page: movieSchemas.getMoviesQuery.extract('page'),
-    limit: movieSchemas.getMoviesQuery.extract('limit'),
+    page: Joi.number().integer().min(1).default(1).optional(),
+    limit: Joi.number().integer().min(1).max(50).default(10).optional(),
   }, 'query'),
   asyncHandler(movieController.searchMovies)
 );
