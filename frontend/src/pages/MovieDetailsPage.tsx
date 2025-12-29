@@ -19,12 +19,14 @@ import { MovieWithShows } from '@/types/api';
 
 interface Show {
     id: string;
-    show_date: string;
-    show_time: string;
-    hall_name: string;
+    date?: string;  // Date from the byDate grouping
+    time: string;  // Backend returns 'time', not 'show_time'
+    hall: string;  // Backend returns 'hall', not 'hall_name'
     price: number;
-    available_seats: number;
-    total_seats: number;
+    availableSeats: number;  // Backend returns camelCase
+    totalSeats: number;  // Backend returns camelCase
+    priceFormatted: string;
+    status: 'available' | 'sold_out';
 }
 
 const MovieDetailsPage: React.FC = () => {
@@ -49,9 +51,20 @@ const MovieDetailsPage: React.FC = () => {
                 setMovie(movieResponse);
 
                 // Fetch shows for this movie
+                console.log('🎬 Fetching shows for movie:', id);
                 const showsResponse = await showApi.getShowsByMovie(id);
                 console.log('✅ Shows fetched:', showsResponse);
-                setShows(showsResponse.shows || []);
+
+                // Backend returns shows grouped by date, flatten them into an array
+                const showsArray: Show[] = [];
+                if (showsResponse.shows?.byDate) {
+                    Object.entries(showsResponse.shows.byDate).forEach(([date, dateShows]: [string, any]) => {
+                        dateShows.forEach((show: any) => {
+                            showsArray.push({ ...show, date }); // Add date to each show
+                        });
+                    });
+                }
+                setShows(showsArray);
 
                 setError(null);
             } catch (err: any) {
@@ -156,27 +169,29 @@ const MovieDetailsPage: React.FC = () => {
                                     >
                                         <CardContent>
                                             <Typography variant="h6" gutterBottom>
-                                                {show.hall_name}
+                                                {show.hall}
                                             </Typography>
+                                            {show.date && (
+                                                <Typography variant="body2" color="text.secondary">
+                                                    📅 {new Date(show.date).toLocaleDateString()}
+                                                </Typography>
+                                            )}
                                             <Typography variant="body2" color="text.secondary">
-                                                📅 {new Date(show.show_date).toLocaleDateString()}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                🕒 {show.show_time}
+                                                🕒 {show.time}
                                             </Typography>
                                             <Typography variant="h6" color="secondary.main" sx={{ mt: 2 }}>
-                                                ₹{show.price}
+                                                {show.priceFormatted}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {show.available_seats}/{show.total_seats} seats available
+                                                {show.availableSeats}/{show.totalSeats} seats available
                                             </Typography>
                                             <Button
                                                 fullWidth
                                                 variant="contained"
                                                 sx={{ mt: 2 }}
-                                                disabled={show.available_seats === 0}
+                                                disabled={show.status === 'sold_out'}
                                             >
-                                                {show.available_seats === 0 ? 'Sold Out' : 'Book Now'}
+                                                {show.status === 'sold_out' ? 'Sold Out' : 'Book Now'}
                                             </Button>
                                         </CardContent>
                                     </Card>
