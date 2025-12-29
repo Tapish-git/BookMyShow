@@ -157,7 +157,6 @@ const getMovieById = asyncHandler(async (req, res) => {
             },
           },
           required: false, // Left join - include movies even without shows
-          order: [['show_date', 'ASC'], ['show_time', 'ASC']],
           attributes: [
             'id',
             'show_date',
@@ -169,6 +168,7 @@ const getMovieById = asyncHandler(async (req, res) => {
           ],
         },
       ],
+      order: [[{ model: Show, as: 'shows' }, 'show_date', 'ASC'], [{ model: Show, as: 'shows' }, 'show_time', 'ASC']],
     });
 
     if (!movie) {
