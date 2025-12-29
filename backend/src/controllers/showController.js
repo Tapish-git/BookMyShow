@@ -181,27 +181,35 @@ const getAllShows = asyncHandler(async (req, res) => {
  * @returns {Promise<void>}
  */
 const getShowsByMovie = asyncHandler(async (req, res) => {
+  console.log('🎬 [getShowsByMovie] START - movieId:', req.params.movieId, 'date:', req.query.date);
   const startTime = Date.now();
   const { movieId } = req.params;
   const { date } = req.query;
 
   try {
+    console.log('🔍 [getShowsByMovie] Step 1: Finding movie by ID:', movieId);
     // Verify movie exists
     const movie = await Movie.findByPk(movieId);
-    console.log('Movie found:', movie);
+    console.log('✅ [getShowsByMovie] Movie found:', movie ? movie.title : 'NULL');
     if (!movie) {
+      console.log('❌ [getShowsByMovie] Movie not found, throwing NotFoundError');
       throw new NotFoundError('Movie', movieId);
     }
 
+    console.log('🔍 [getShowsByMovie] Step 2: Building date filter');
     // Build date filter
     let dateFilter = {
       [Op.gte]: new Date().toISOString().split('T')[0], // Today onwards
     };
+    console.log('📅 [getShowsByMovie] Default date filter (today onwards):', dateFilter);
 
     if (date) {
       dateFilter = { [Op.eq]: date };
+      console.log('📅 [getShowsByMovie] Using specific date filter:', dateFilter);
     }
 
+    console.log('🔍 [getShowsByMovie] Step 3: Querying shows from database');
+    console.log('🔍 [getShowsByMovie] Query params:', { movie_id: movieId, show_date: dateFilter });
     // Get shows for this movie
     const shows = await Show.findAll({
       where: {
@@ -225,13 +233,17 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         'price',
       ],
     });
-    console.log('Shows found:', shows);
+    console.log('✅ [getShowsByMovie] Shows found:', shows.length, 'shows');
+    console.log('📊 [getShowsByMovie] Show details:', JSON.stringify(shows, null, 2));
+    console.log('🔍 [getShowsByMovie] Step 4: Grouping shows by date');
     // Group shows by date
     const showsByDate = {};
-    shows.forEach(show => {
+    shows.forEach((show, index) => {
+      console.log(`📅 [getShowsByMovie] Processing show ${index + 1}:`, show.show_date, show.show_time, show.hall_name);
       const dateKey = show.show_date;
       if (!showsByDate[dateKey]) {
         showsByDate[dateKey] = [];
+        console.log(`📅 [getShowsByMovie] Created new date group:`, dateKey);
       }
 
       showsByDate[dateKey].push({
@@ -245,6 +257,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         status: show.available_seats > 0 ? 'available' : 'sold_out',
       });
     });
+    console.log('✅ [getShowsByMovie] Grouped shows by date:', Object.keys(showsByDate));
 
     // Log performance
     const duration = Date.now() - startTime;
@@ -263,7 +276,8 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
       userAgent: req.get('User-Agent'),
     });
 
-    res.json({
+    console.log('🔍 [getShowsByMovie] Step 5: Preparing response');
+    const response = {
       success: true,
       data: {
         movie: {
@@ -283,9 +297,22 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         requestedDate: date || 'all_upcoming',
       },
       timestamp: new Date().toISOString(),
+    };
+    console.log('✅ [getShowsByMovie] Response prepared, sending...');
+    console.log('📊 [getShowsByMovie] Response summary:', {
+      movieTitle: movie.title,
+      totalShows: shows.length,
+      dates: Object.keys(showsByDate)
     });
+    res.json(response);
+    console.log('✅ [getShowsByMovie] SUCCESS - Response sent');
 
   } catch (error) {
+    console.error('❌ [getShowsByMovie] ERROR CAUGHT:');
+    console.error('❌ [getShowsByMovie] Error name:', error.name);
+    console.error('❌ [getShowsByMovie] Error message:', error.message);
+    console.error('❌ [getShowsByMovie] Error stack:', error.stack);
+    console.error('❌ [getShowsByMovie] Full error:', error);
     logPerformance('getShowsByMovie', Date.now() - startTime, {
       movieId,
       error: error.message,
