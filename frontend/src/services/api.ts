@@ -31,8 +31,11 @@ import {
 } from '@/types/api';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://bookmyshow-production-f9f3.up.railway.app/api/v1";
-console.log("API BASE URL:", API_BASE_URL);
+const MODE = import.meta.env.MODE;
+const API_BASE_URL = MODE === 'production'
+  ? '/api/v1' // Use Vite proxy to local backend in dev
+  : (import.meta.env.VITE_API_BASE_URL || "https://bookmyshow-production-f9f3.up.railway.app/api/v1");
+console.log("API BASE URL:", API_BASE_URL, "MODE:", MODE);
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 /**

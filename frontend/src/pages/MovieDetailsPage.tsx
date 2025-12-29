@@ -35,6 +35,7 @@ const MovieDetailsPage: React.FC = () => {
 
     const [movie, setMovie] = useState<MovieWithShows | null>(null);
     const [shows, setShows] = useState<Show[]>([]);
+    const [showsByDate, setShowsByDate] = useState<Record<string, Show[]>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -55,15 +56,34 @@ const MovieDetailsPage: React.FC = () => {
                 const showsResponse = await showApi.getShowsByMovie(id);
                 console.log('✅ Shows fetched:', showsResponse);
 
-                // Backend returns shows grouped by date, flatten them into an array
+                // Backend returns shows grouped by date
+                const grouped = showsResponse.shows?.byDate || {};
+                const availableDates = showsResponse.shows?.availableDates || Object.keys(grouped);
+                console.log('📅 Available dates:', availableDates);
+                console.log('📊 Shows by date detail:', grouped);
+
+                // Flatten into an array for card rendering and keep grouped map for sections
                 const showsArray: Show[] = [];
-                if (showsResponse.shows?.byDate) {
-                    Object.entries(showsResponse.shows.byDate).forEach(([date, dateShows]: [string, any]) => {
-                        dateShows.forEach((show: any) => {
-                            showsArray.push({ ...show, date }); // Add date to each show
-                        });
+                Object.entries(grouped).forEach(([date, dateShows]: [string, any]) => {
+                    dateShows.forEach((show: any, idx: number) => {
+                        const normalized: Show = {
+                            id: show.id,
+                            date,
+                            time: show.time,
+                            hall: show.hall,
+                            price: show.price,
+                            availableSeats: show.availableSeats,
+                            totalSeats: show.totalSeats,
+                            priceFormatted: show.priceFormatted,
+                            status: show.status,
+                        };
+                        showsArray.push(normalized);
+                        // Verbose per-show log for debugging
+                        console.log(`🎟️ Show ${idx + 1} on ${date}:`, normalized);
                     });
-                }
+                });
+                console.log('🔢 Total shows (flattened):', showsArray.length);
+                setShowsByDate(grouped);
                 setShows(showsArray);
 
                 setError(null);
@@ -148,56 +168,63 @@ const MovieDetailsPage: React.FC = () => {
                     <Typography variant="h4" gutterBottom>
                         Available Shows
                     </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {`Total shows: ${shows.length}`}
+                    </Typography>
                     <Divider sx={{ mb: 3 }} />
 
                     {shows.length === 0 ? (
                         <Alert severity="info">No shows available for this movie at the moment.</Alert>
                     ) : (
-                        <Grid container spacing={2}>
-                            {shows.map((show) => (
-                                <Grid item xs={12} sm={6} md={4} key={show.id}>
-                                    <Card
-                                        sx={{
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                boxShadow: 4,
-                                                transform: 'translateY(-2px)',
-                                                transition: 'all 0.2s'
-                                            }
-                                        }}
-                                        onClick={() => navigate(`/shows/${show.id}/seats`)}
-                                    >
-                                        <CardContent>
-                                            <Typography variant="h6" gutterBottom>
-                                                {show.hall}
-                                            </Typography>
-                                            {show.date && (
-                                                <Typography variant="body2" color="text.secondary">
-                                                    📅 {new Date(show.date).toLocaleDateString()}
-                                                </Typography>
-                                            )}
-                                            <Typography variant="body2" color="text.secondary">
-                                                🕒 {show.time}
-                                            </Typography>
-                                            <Typography variant="h6" color="secondary.main" sx={{ mt: 2 }}>
-                                                {show.priceFormatted}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {show.availableSeats}/{show.totalSeats} seats available
-                                            </Typography>
-                                            <Button
-                                                fullWidth
-                                                variant="contained"
-                                                sx={{ mt: 2 }}
-                                                disabled={show.status === 'sold_out'}
-                                            >
-                                                {show.status === 'sold_out' ? 'Sold Out' : 'Book Now'}
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
+                        <Box>
+                            {Object.entries(showsByDate).map(([date, dateShows]) => (
+                                <Box key={date} sx={{ mb: 4 }}>
+                                    <Typography variant="h6" sx={{ mb: 2 }}>
+                                        {`📅 ${new Date(date).toLocaleDateString()} — ${dateShows.length} show(s)`}
+                                    </Typography>
+                                    <Grid container spacing={2}>
+                                        {dateShows.map((show: any) => (
+                                            <Grid item xs={12} sm={6} md={4} key={show.id}>
+                                                <Card
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        '&:hover': {
+                                                            boxShadow: 4,
+                                                            transform: 'translateY(-2px)',
+                                                            transition: 'all 0.2s'
+                                                        }
+                                                    }}
+                                                    onClick={() => navigate(`/shows/${show.id}/seats`)}
+                                                >
+                                                    <CardContent>
+                                                        <Typography variant="h6" gutterBottom>
+                                                            {show.hall}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            🕒 {show.time}
+                                                        </Typography>
+                                                        <Typography variant="h6" color="secondary.main" sx={{ mt: 2 }}>
+                                                            {show.priceFormatted}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {show.availableSeats}/{show.totalSeats} seats available
+                                                        </Typography>
+                                                        <Button
+                                                            fullWidth
+                                                            variant="contained"
+                                                            sx={{ mt: 2 }}
+                                                            disabled={show.status === 'sold_out'}
+                                                        >
+                                                            {show.status === 'sold_out' ? 'Sold Out' : 'Book Now'}
+                                                        </Button>
+                                                    </CardContent>
+                                                </Card>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                </Box>
                             ))}
-                        </Grid>
+                        </Box>
                     )}
                 </Box>
 

@@ -169,6 +169,7 @@ app.use(cors({
       FRONTEND_URL,
       'http://localhost:3001',
       'http://localhost:3000',
+      'http://localhost:5173', // Vite dev server
     ];
 
     // Check if origin is in allowed list OR is a Vercel preview deployment
