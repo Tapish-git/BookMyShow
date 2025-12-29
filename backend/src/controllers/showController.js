@@ -188,6 +188,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
   try {
     // Verify movie exists
     const movie = await Movie.findByPk(movieId);
+    console.log('Movie found:', movie);
     if (!movie) {
       throw new NotFoundError('Movie', movieId);
     }
@@ -198,7 +199,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
     };
 
     if (date) {
-      dateFilter = date;
+      dateFilter = { [Op.eq]: date };
     }
 
     // Get shows for this movie
@@ -224,7 +225,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         'price',
       ],
     });
-
+    console.log('Shows found:', shows);
     // Group shows by date
     const showsByDate = {};
     shows.forEach(show => {
