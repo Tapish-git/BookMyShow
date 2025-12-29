@@ -591,7 +591,8 @@ SeatReservation.blockMultipleSeats = async function(seatIds, durationMinutes = 5
         { is_available: false },
         { 
           where: { id: seatId },
-          transaction 
+          transaction,
+          validate: false // avoid row_number validator when only toggling availability
         }
       );
     }

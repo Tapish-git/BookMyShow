@@ -24,6 +24,24 @@ interface Seat {
     status: string;
 }
 
+const normalizeSeat = (rowName: string, seat: any, showPrice: number): Seat => {
+    const seatIdentifier = seat.seatIdentifier || seat.seat_identifier || seat.displayName || seat.display_name;
+    const seatType = seat.seatType || seat.seat_type || 'Regular';
+    const isAvailable = (seat.isAvailable ?? seat.is_available ?? true) === true;
+    const reservationStatusRaw = seat.reservationStatus || seat.reservation_status || null;
+    const status = isAvailable ? 'available' : (reservationStatusRaw ? reservationStatusRaw.toString().toLowerCase() : 'booked');
+    const seatPrice = Number(showPrice ?? seat.price ?? 0);
+
+    return {
+        id: seat.id,
+        seat_number: seatIdentifier,
+        row_name: rowName,
+        seat_type: seatType,
+        price: seatPrice,
+        status
+    };
+};
+
 const SeatSelectionPage: React.FC = () => {
     const { showId } = useParams<{ showId: string }>();
     const navigate = useNavigate();
@@ -33,6 +51,9 @@ const SeatSelectionPage: React.FC = () => {
     const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [blockedSeatIds, setBlockedSeatIds] = useState<string[]>([]);
+    const [countdown, setCountdown] = useState<number | null>(null); // seconds
+    const [blockExpiry, setBlockExpiry] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchShowAndSeats = async () => {
@@ -54,16 +75,7 @@ const SeatSelectionPage: React.FC = () => {
                 const seatsArray: Seat[] = [];
                 if (seatsResponse.seatLayout) {
                     Object.entries(seatsResponse.seatLayout).forEach(([rowName, rowSeats]) => {
-                        rowSeats.forEach(seat => {
-                            seatsArray.push({
-                                id: seat.id,
-                                seat_number: seat.seatIdentifier,
-                                row_name: rowName,
-                                seat_type: seat.seatType,
-                                price: seatsResponse.show.price, // Use show price
-                                status: seat.reservationStatus.toLowerCase()
-                            });
-                        });
+                        rowSeats.forEach(seat => seatsArray.push(normalizeSeat(rowName, seat, seatsResponse.show.price)));
                     });
                 }
                 setSeats(seatsArray);
@@ -80,30 +92,88 @@ const SeatSelectionPage: React.FC = () => {
         fetchShowAndSeats();
     }, [showId]);
 
-    const handleSeatClick = (seatId: string, seatStatus: string) => {
+    // Countdown tick
+    useEffect(() => {
+        if (countdown === null) return;
+        if (countdown <= 0) return;
+        const timer = setInterval(() => {
+            setCountdown(prev => (prev && prev > 0) ? prev - 1 : 0);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [countdown]);
+
+    // Auto-release seats when countdown ends
+    useEffect(() => {
+        const releaseOnExpiry = async () => {
+            if (countdown === 0 && blockedSeatIds.length > 0) {
+                try {
+                    await seatApi.releaseSeats(blockedSeatIds);
+                } catch (err) {
+                    console.error('❌ Auto-release failed:', err);
+                } finally {
+                    setBlockedSeatIds([]);
+                    setSelectedSeats([]);
+                    setBlockExpiry(null);
+                    setCountdown(null);
+                    // Refresh seat layout to reflect availability
+                    if (showId) {
+                        try {
+                            const seatsResponse = await seatApi.getSeatLayout(showId);
+                            const seatsArray: Seat[] = [];
+                            if (seatsResponse.seatLayout) {
+                                Object.entries(seatsResponse.seatLayout).forEach(([rowName, rowSeats]) => {
+                                    rowSeats.forEach(seat => seatsArray.push(normalizeSeat(rowName, seat, seatsResponse.show.price)));
+                                });
+                            }
+                            setSeats(seatsArray);
+                        } catch {}
+                    }
+                }
+            }
+        };
+        releaseOnExpiry();
+    }, [countdown]);
+
+    const handleSeatClick = async (seatId: string, seatStatus: string) => {
         if (seatStatus !== 'available') return;
 
-        setSelectedSeats(prev =>
-            prev.includes(seatId)
+        setSelectedSeats(prev => {
+            const next = prev.includes(seatId)
                 ? prev.filter(id => id !== seatId)
-                : [...prev, seatId]
-        );
+                : [...prev, seatId];
+            return next;
+        });
+
+        // Start session countdown on first selection (5 mins)
+        if (countdown === null) {
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+            setBlockExpiry(expiresAt);
+            setCountdown(5 * 60);
+        }
     };
 
     const handleProceed = async () => {
-        if (selectedSeats.length === 0) return;
+        if (selectedSeats.length === 0 || !showId) return;
 
         try {
-            // Block seats
-            await seatApi.blockSeats({
-                showId: showId!,
-                seatIds: selectedSeats
-            });
+            // Block all selected seats at once before booking
+            await seatApi.blockSeats({ showId, seatIds: selectedSeats, blockDuration: 5 });
+            setBlockedSeatIds(selectedSeats);
 
-            // Navigate to booking page
-            navigate(`/booking?showId=${showId}&seats=${selectedSeats.join(',')}`);
+            // Create booking immediately and navigate to confirmation
+            const booking = await (await import('@/services/api')).bookingApi.createBooking({
+                showId,
+                seatIds: selectedSeats,
+                userDetails: {
+                    name: 'Guest User',
+                    email: 'guest@example.com'
+                }
+            });
+            const reference = booking.booking.reference;
+            navigate(`/booking/confirmation/${reference}`);
         } catch (err: any) {
-            setError(err?.error?.message || 'Failed to block seats');
+            console.error('❌ Booking failed:', err);
+            setError(err?.error?.message || 'Failed to complete booking');
         }
     };
 
@@ -162,6 +232,9 @@ const SeatSelectionPage: React.FC = () => {
                         <Chip label={`${new Date(show.showDate).toLocaleDateString()}`} />
                         <Chip label={`${show.showTime}`} />
                         <Chip label={`₹${show.price}`} color="secondary" />
+                        {countdown !== null && (
+                            <Chip label={`Time left: ${Math.floor((countdown || 0)/60)}m ${(countdown || 0)%60}s`} color="warning" />
+                        )}
                     </Box>
                 </Paper>
 
@@ -209,7 +282,7 @@ const SeatSelectionPage: React.FC = () => {
                                             } : {}
                                         }}
                                     >
-                                        <Typography variant="caption">{seat.seat_number.slice(-2)}</Typography>
+                                        <Typography variant="caption">{(seat.seat_number || '').toString()}</Typography>
                                     </Box>
                                 ))}
                             </Box>

@@ -16,10 +16,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [
-      react({
-        // Enable React Fast Refresh
-        fastRefresh: true,
-      }),
+      react(),
     ],
 
     // Development server configuration

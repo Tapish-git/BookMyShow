@@ -1,0 +1,150 @@
+{
+  "info": {
+    "name": "BookMyShow - Shows API",
+    "description": "Test collection for Shows API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["health"]
+        }
+      },
+      "description": "Basic health check to verify server is running"
+    },
+    {
+      "name": "Get All Movies",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/api/v1/movies",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "movies"]
+        }
+      },
+      "description": "Get paginated list of all movies (first 10 by default)"
+    },
+    {
+      "name": "Get Movie by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/api/v1/movies/550e8400-e29b-41d4-a716-446655440005",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "movies", "550e8400-e29b-41d4-a716-446655440005"]
+        }
+      },
+      "description": "Get detailed information about a specific movie. Replace the UUID with an actual movie ID from your database."
+    },
+    {
+      "name": "Get Shows by Movie (All Dates)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/api/v1/shows/movie/550e8400-e29b-41d4-a716-446655440005",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "shows", "movie", "550e8400-e29b-41d4-a716-446655440005"]
+        }
+      },
+      "description": "Get all shows for a movie (grouped by date). Returns data like:\n{\n  \"success\": true,\n  \"data\": {\n    \"movie\": { id, title, genre, duration, rating, posterUrl, language },\n    \"shows\": {\n      \"byDate\": {\n        \"2025-12-30\": [ { id, time, hall, totalSeats, availableSeats, price, priceFormatted, status } ],\n        \"2025-12-31\": [ ... ]\n      },\n      \"totalShows\": 6,\n      \"availableDates\": [ \"2025-12-30\", \"2025-12-31\" ]\n    },\n    \"requestedDate\": \"all_upcoming\"\n  },\n  \"timestamp\": \"2025-12-30T...\"\n}"
+    },
+    {
+      "name": "Get Shows by Movie (Specific Date)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/api/v1/shows/movie/550e8400-e29b-41d4-a716-446655440005?date=2025-12-31",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "shows", "movie", "550e8400-e29b-41d4-a716-446655440005"],
+          "query": [
+            {
+              "key": "date",
+              "value": "2025-12-31"
+            }
+          ]
+        }
+      },
+      "description": "Get shows for a movie on a specific date. Date must be today or in the future (YYYY-MM-DD format)"
+    },
+    {
+      "name": "Get Show Details (by ID)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/api/v1/shows/650e8400-e29b-41d4-a716-446655440004",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "shows", "650e8400-e29b-41d4-a716-446655440004"]
+        }
+      },
+      "description": "Get detailed information about a specific show (includes seat summary, time until show, etc.). This endpoint is called when you click 'Book Now' on a show card."
+    },
+    {
+      "name": "Get Show Seat Layout",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3004/api/v1/seats/layout/650e8400-e29b-41d4-a716-446655440004?availableOnly=false",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "seats", "layout", "650e8400-e29b-41d4-a716-446655440004"],
+          "query": [
+            {
+              "key": "availableOnly",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      "description": "Get the complete seat layout for a show. Returns seats grouped by row with their availability status."
+    },
+    {
+      "name": "Block Seats",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"showId\": \"650e8400-e29b-41d4-a716-446655440004\",\n  \"seatIds\": [\n    \"seat-uuid-1\",\n    \"seat-uuid-2\"\n  ],\n  \"blockDuration\": 5\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3004/api/v1/seats/block",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3004",
+          "path": ["api", "v1", "seats", "block"]
+        }
+      },
+      "description": "Temporarily block seats for the booking process (5-minute hold by default). Requires valid seat UUIDs from the seat layout response."
+    }
+  ]
+}

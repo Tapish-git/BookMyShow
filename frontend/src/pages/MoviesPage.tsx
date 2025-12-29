@@ -89,7 +89,9 @@ const MoviesPage: React.FC = () => {
                                     <CardMedia
                                         component="img"
                                         height="400"
-                                        image={movie.posterUrl || '/placeholder-movie.jpg'}
+                                        image={(movie.posterUrl && !movie.posterUrl.includes('placeholder-movie.jpg'))
+                                            ? movie.posterUrl
+                                            : 'https://placehold.co/600x900/333333/FFFFFF?text=Movie+Poster'}
                                         alt={movie.title}
                                         sx={{ objectFit: 'cover' }}
                                     />
