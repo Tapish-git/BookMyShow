@@ -10,10 +10,12 @@ import {
     CircularProgress,
     Alert
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { movieApi } from '@/services/api';
 import { Movie } from '@/types/api';
 
 const MoviesPage: React.FC = () => {
+    const navigate = useNavigate();
     const [movies, setMovies] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ const MoviesPage: React.FC = () => {
                                             transition: 'all 0.3s ease'
                                         }
                                     }}
-                                    onClick={() => window.location.href = `/movies/${movie.id}`}
+                                    onClick={() => navigate(`/movies/${movie.id}`)}
                                 >
                                     <CardMedia
                                         component="img"
