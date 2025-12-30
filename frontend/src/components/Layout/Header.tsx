@@ -33,7 +33,7 @@ const Header: React.FC = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const theme = useTheme();
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
