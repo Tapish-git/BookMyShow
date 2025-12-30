@@ -3,6 +3,7 @@ node_modules
 .pnp
 .pnp.js
 
+
 # Testing
 coverage
 .nyc_output
@@ -37,6 +38,7 @@ pnpm-debug.log*
 backend/dist
 backend/coverage
 backend/.env
+backend/logs
 
 # Frontend specific
 frontend/dist

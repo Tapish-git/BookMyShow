@@ -8,12 +8,23 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [movieRoutes.js] File loading started...');
+
 const express = require('express');
+console.log('✅ [movieRoutes.js] express loaded');
+
 const movieController = require('../controllers/movieController');
-const { validate, movieSchemas } = require('../middleware/requestValidator');
+console.log('✅ [movieRoutes.js] movieController loaded');
+const { validate, movieSchemas, commonSchemas } = require('../middleware/requestValidator');
+console.log('✅ [movieRoutes.js] requestValidator loaded');
 const { asyncHandler } = require('../middleware/errorHandler');
+console.log('✅ [movieRoutes.js] errorHandler loaded');
+
+const Joi = require('joi');
 
 const router = express.Router();
+console.log('✅ [movieRoutes.js] Router created');
+console.log('🎉 [movieRoutes.js] ALL IMPORTS SUCCESSFUL!');
 
 /**
  * @route GET /api/v1/movies
@@ -45,9 +56,9 @@ router.get('/',
  */
 router.get('/search',
   validate({
-    q: movieSchemas.commonSchemas.searchQuery,
-    page: movieSchemas.getMoviesQuery.extract('page'),
-    limit: movieSchemas.getMoviesQuery.extract('limit'),
+    q: commonSchemas.searchQuery,
+    page: Joi.number().integer().min(1).default(1).optional(),
+    limit: Joi.number().integer().min(1).max(50).default(10).optional(),
   }, 'query'),
   asyncHandler(movieController.searchMovies)
 );
@@ -63,8 +74,8 @@ router.get('/search',
  */
 router.get('/now-showing',
   validate({
-    page: movieSchemas.getMoviesQuery.extract('page'),
-    limit: movieSchemas.getMoviesQuery.extract('limit'),
+    page: Joi.number().integer().min(1).default(1).optional(),
+    limit: Joi.number().integer().min(1).default(20).optional(),
   }, 'query'),
   asyncHandler(movieController.getNowShowingMovies)
 );
@@ -82,13 +93,13 @@ router.get('/now-showing',
 router.get('/genre/:genre',
   validate({
     genre: require('joi').string().valid(
-      'Action', 'Comedy', 'Drama', 'Horror', 'Romance', 
+      'Action', 'Comedy', 'Drama', 'Horror', 'Romance',
       'Sci-Fi', 'Thriller', 'Adventure', 'Animation', 'Family'
     ).required(),
   }, 'params'),
   validate({
-    page: movieSchemas.getMoviesQuery.extract('page'),
-    limit: movieSchemas.getMoviesQuery.extract('limit'),
+    page: Joi.number().integer().min(1).default(1).optional(),
+    limit: Joi.number().integer().min(1).default(12).optional(),
   }, 'query'),
   asyncHandler(movieController.getMoviesByGenre)
 );

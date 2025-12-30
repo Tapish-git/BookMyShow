@@ -52,11 +52,14 @@ Object.keys(models).forEach(modelName => {
 const initializeDatabase = async (force = false, alter = false) => {
   try {
     console.log('🔄 Initializing database...');
-    
+    console.log('🔗 Attempting to authenticate with database...');
+
     // Test connection first
     await sequelize.authenticate();
-    console.log('✅ Database connection verified');
-    
+    console.log('✅ Database connection verified successfully');
+
+    console.log('🔄 Syncing database models...');
+
     // Sync models with database
     if (force) {
       console.log('⚠️  WARNING: Force sync will drop all tables!');
@@ -70,9 +73,13 @@ const initializeDatabase = async (force = false, alter = false) => {
       await sequelize.sync();
       console.log('✅ Database synchronized');
     }
-    
+
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+    console.error('❌ CRITICAL: Database initialization failed');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Stack trace:', error.stack);
     throw error;
   }
 };
@@ -86,14 +93,14 @@ const initializeDatabase = async (force = false, alter = false) => {
 const seedDatabase = async () => {
   try {
     console.log('🌱 Seeding database with sample data...');
-    
+
     // Check if data already exists
     const movieCount = await Movie.count();
     if (movieCount > 0) {
       console.log('📊 Database already contains data, skipping seed');
       return;
     }
-    
+
     // Create sample movies
     const movies = await Movie.bulkCreate([
       {
@@ -127,15 +134,15 @@ const seedDatabase = async () => {
         language: 'English',
       },
     ]);
-    
+
     console.log(`✅ Created ${movies.length} sample movies`);
-    
+
     // Create sample shows for each movie
     const shows = [];
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     for (const movie of movies) {
       // Create shows for today and tomorrow
       const movieShows = await Show.bulkCreate([
@@ -167,26 +174,26 @@ const seedDatabase = async () => {
           price: 250.00,
         },
       ]);
-      
+
       shows.push(...movieShows);
     }
-    
+
     console.log(`✅ Created ${shows.length} sample shows`);
-    
+
     // Create seats for each show
     let totalSeatsCreated = 0;
-    
+
     for (const show of shows) {
       const seats = [];
       const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
       const seatsPerRow = Math.ceil(show.total_seats / rows.length);
-      
+
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const row = rows[rowIndex];
         const seatsInThisRow = Math.min(seatsPerRow, show.total_seats - (rowIndex * seatsPerRow));
-        
+
         if (seatsInThisRow <= 0) break;
-        
+
         for (let seatNum = 1; seatNum <= seatsInThisRow; seatNum++) {
           seats.push({
             show_id: show.id,
@@ -197,14 +204,14 @@ const seedDatabase = async () => {
           });
         }
       }
-      
+
       await Seat.bulkCreate(seats);
       totalSeatsCreated += seats.length;
     }
-    
+
     console.log(`✅ Created ${totalSeatsCreated} sample seats`);
     console.log('🎉 Database seeding completed successfully!');
-    
+
   } catch (error) {
     console.error('❌ Database seeding failed:', error.message);
     throw error;
@@ -235,7 +242,7 @@ const closeDatabase = async () => {
 const healthCheck = async () => {
   try {
     await sequelize.authenticate();
-    
+
     // Get basic statistics
     const stats = await Promise.all([
       Movie.count(),
@@ -244,7 +251,7 @@ const healthCheck = async () => {
       Booking.count(),
       SeatReservation.count(),
     ]);
-    
+
     return {
       status: 'healthy',
       connection: 'active',
@@ -257,7 +264,7 @@ const healthCheck = async () => {
       },
       timestamp: new Date(),
     };
-    
+
   } catch (error) {
     return {
       status: 'unhealthy',
@@ -272,14 +279,14 @@ const healthCheck = async () => {
 module.exports = {
   // Database connection
   sequelize,
-  
+
   // Models
   Movie,
   Show,
   Seat,
   Booking,
   SeatReservation,
-  
+
   // Utilities
   initializeDatabase,
   seedDatabase,

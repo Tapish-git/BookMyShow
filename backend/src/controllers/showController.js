@@ -8,10 +8,15 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [showController.js] Loading...');
 const { Show, Movie, Seat } = require('../models');
-const { asyncHandler, NotFoundError } = require('../middleware/errorHandler');
+console.log('✅ [showController.js] Models loaded');
+const { asyncHandler, NotFoundError, BusinessLogicError } = require('../middleware/errorHandler');
+console.log('✅ [showController.js] Error handlers loaded');
 const { logBusinessEvent, logPerformance } = require('../middleware/logger');
+console.log('✅ [showController.js] Logger loaded');
 const { Op } = require('sequelize');
+console.log('✅ [showController.js] ALL IMPORTS COMPLETE!');
 
 /**
  * Get all shows with optional filtering
@@ -32,22 +37,22 @@ const { Op } = require('sequelize');
  */
 const getAllShows = asyncHandler(async (req, res) => {
   const startTime = Date.now();
-  const { 
-    movieId, 
-    date, 
-    hallName, 
-    availableOnly = true, 
-    page = 1, 
-    limit = 10 
+  const {
+    movieId,
+    date,
+    hallName,
+    availableOnly = true,
+    page = 1,
+    limit = 10
   } = req.query;
 
   // Build filter conditions
   const whereConditions = {};
-  
+
   if (movieId) {
     whereConditions.movie_id = movieId;
   }
-  
+
   if (date) {
     whereConditions.show_date = date;
   } else {
@@ -56,11 +61,11 @@ const getAllShows = asyncHandler(async (req, res) => {
       [Op.gte]: new Date().toISOString().split('T')[0],
     };
   }
-  
+
   if (hallName) {
     whereConditions.hall_name = hallName;
   }
-  
+
   if (availableOnly) {
     whereConditions.available_seats = {
       [Op.gt]: 0,
@@ -176,26 +181,35 @@ const getAllShows = asyncHandler(async (req, res) => {
  * @returns {Promise<void>}
  */
 const getShowsByMovie = asyncHandler(async (req, res) => {
+  console.log('🎬 [getShowsByMovie] START - movieId:', req.params.movieId, 'date:', req.query.date);
   const startTime = Date.now();
   const { movieId } = req.params;
   const { date } = req.query;
 
   try {
+    console.log('🔍 [getShowsByMovie] Step 1: Finding movie by ID:', movieId);
     // Verify movie exists
     const movie = await Movie.findByPk(movieId);
+    console.log('✅ [getShowsByMovie] Movie found:', movie ? movie.title : 'NULL');
     if (!movie) {
+      console.log('❌ [getShowsByMovie] Movie not found, throwing NotFoundError');
       throw new NotFoundError('Movie', movieId);
     }
 
+    console.log('🔍 [getShowsByMovie] Step 2: Building date filter');
     // Build date filter
     let dateFilter = {
       [Op.gte]: new Date().toISOString().split('T')[0], // Today onwards
     };
-    
+    console.log('📅 [getShowsByMovie] Default date filter (today onwards):', dateFilter);
+
     if (date) {
-      dateFilter = date;
+      dateFilter = { [Op.eq]: date };
+      console.log('📅 [getShowsByMovie] Using specific date filter:', dateFilter);
     }
 
+    console.log('🔍 [getShowsByMovie] Step 3: Querying shows from database');
+    console.log('🔍 [getShowsByMovie] Query params:', { movie_id: movieId, show_date: dateFilter });
     // Get shows for this movie
     const shows = await Show.findAll({
       where: {
@@ -219,15 +233,19 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         'price',
       ],
     });
-
+    console.log('✅ [getShowsByMovie] Shows found:', shows.length, 'shows');
+    console.log('📊 [getShowsByMovie] Show details:', JSON.stringify(shows, null, 2));
+    console.log('🔍 [getShowsByMovie] Step 4: Grouping shows by date');
     // Group shows by date
     const showsByDate = {};
-    shows.forEach(show => {
+    shows.forEach((show, index) => {
+      console.log(`📅 [getShowsByMovie] Processing show ${index + 1}:`, show.show_date, show.show_time, show.hall_name);
       const dateKey = show.show_date;
       if (!showsByDate[dateKey]) {
         showsByDate[dateKey] = [];
+        console.log(`📅 [getShowsByMovie] Created new date group:`, dateKey);
       }
-      
+
       showsByDate[dateKey].push({
         id: show.id,
         time: show.show_time,
@@ -239,6 +257,7 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         status: show.available_seats > 0 ? 'available' : 'sold_out',
       });
     });
+    console.log('✅ [getShowsByMovie] Grouped shows by date:', Object.keys(showsByDate));
 
     // Log performance
     const duration = Date.now() - startTime;
@@ -257,7 +276,8 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
       userAgent: req.get('User-Agent'),
     });
 
-    res.json({
+    console.log('🔍 [getShowsByMovie] Step 5: Preparing response');
+    const response = {
       success: true,
       data: {
         movie: {
@@ -277,9 +297,22 @@ const getShowsByMovie = asyncHandler(async (req, res) => {
         requestedDate: date || 'all_upcoming',
       },
       timestamp: new Date().toISOString(),
+    };
+    console.log('✅ [getShowsByMovie] Response prepared, sending...');
+    console.log('📊 [getShowsByMovie] Response summary:', {
+      movieTitle: movie.title,
+      totalShows: shows.length,
+      dates: Object.keys(showsByDate)
     });
+    res.json(response);
+    console.log('✅ [getShowsByMovie] SUCCESS - Response sent');
 
   } catch (error) {
+    console.error('❌ [getShowsByMovie] ERROR CAUGHT:');
+    console.error('❌ [getShowsByMovie] Error name:', error.name);
+    console.error('❌ [getShowsByMovie] Error message:', error.message);
+    console.error('❌ [getShowsByMovie] Error stack:', error.stack);
+    console.error('❌ [getShowsByMovie] Full error:', error);
     logPerformance('getShowsByMovie', Date.now() - startTime, {
       movieId,
       error: error.message,
@@ -320,7 +353,7 @@ const getShowById = asyncHandler(async (req, res) => {
     // Get seat layout summary
     const seatLayout = await Seat.getSeatLayout(id);
     const allSeats = Object.values(seatLayout).flat();
-    
+
     const seatSummary = {
       totalSeats: allSeats.length,
       availableSeats: allSeats.filter(seat => seat.is_available).length,
@@ -416,7 +449,7 @@ const getShowsByDateRange = asyncHandler(async (req, res) => {
   // Validate date range
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   if (start > end) {
     throw new BusinessLogicError('startDate must be before or equal to endDate');
   }

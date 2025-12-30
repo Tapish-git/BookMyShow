@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-const { DataTypes } = require('sequelize');
+const { DataTypes, Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 /**
@@ -168,7 +168,7 @@ const SeatReservation = sequelize.define('SeatReservation', {
       unique: true,
       where: {
         reservation_status: {
-          [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+          [Op.in]: ['BLOCKED', 'CONFIRMED'],
         },
       },
     },
@@ -419,22 +419,25 @@ SeatReservation.prototype.formatRemainingTime = function() {
  * @param {number} durationMinutes - Block duration in minutes (default: 5)
  * @returns {Promise<SeatReservation>} Created reservation
  */
-SeatReservation.createBlock = async function(seatId, durationMinutes = 5) {
+SeatReservation.createBlock = async function(seatId, durationMinutes = 5, transaction = null) {
   // Check for existing active reservations
   const existingReservation = await this.findOne({
     where: {
       seat_id: seatId,
       reservation_status: {
-        [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+        [Op.in]: ['BLOCKED', 'CONFIRMED'],
       },
     },
+    transaction,
   });
   
   if (existingReservation) {
     // Check if it's a block that has expired
     if (existingReservation.reservation_status === 'BLOCKED' && existingReservation.hasExpired()) {
+      console.log(`[createBlock] Expiring old block for seat ${seatId}`);
       await existingReservation.expire();
     } else {
+      console.log(`[createBlock] Seat ${seatId} already has active reservation: ${existingReservation.reservation_status}`);
       throw new Error('Seat is already reserved or blocked');
     }
   }
@@ -443,12 +446,61 @@ SeatReservation.createBlock = async function(seatId, durationMinutes = 5) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + (durationMinutes * 60 * 1000));
   
-  return await this.create({
-    seat_id: seatId,
-    reservation_status: 'BLOCKED',
-    blocked_at: now,
-    expires_at: expiresAt,
-  });
+  try {
+    const reservation = await this.create({
+      seat_id: seatId,
+      reservation_status: 'BLOCKED',
+      blocked_at: now,
+      expires_at: expiresAt,
+    }, { transaction });
+    console.log(`[createBlock] Successfully created block for seat ${seatId}, expires: ${expiresAt}`);
+    return reservation;
+  } catch (err) {
+    // Handle unique constraint violation - another request may have created a block concurrently
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      console.log(`[createBlock] Unique constraint violation for seat ${seatId} - checking if expired...`);
+      const latestReservation = await this.findOne({
+        where: {
+          seat_id: seatId,
+          reservation_status: {
+            [Op.in]: ['BLOCKED', 'CONFIRMED'],
+          },
+        },
+        order: [['created_at', 'DESC']],
+        transaction,
+      });
+      
+      if (latestReservation) {
+        if (latestReservation.reservation_status === 'BLOCKED' && latestReservation.hasExpired()) {
+          console.log(`[createBlock] Latest block for seat ${seatId} is expired, deleting and retrying...`);
+          // DELETE the expired reservation to clear the unique constraint
+          await latestReservation.update({ reservation_status: 'EXPIRED' }, { transaction });
+          
+          // Also delete from the table to clear unique index
+          await this.destroy({
+            where: {
+              id: latestReservation.id
+            },
+            transaction
+          });
+          
+          // Retry the create after deleting
+          const retryReservation = await this.create({
+            seat_id: seatId,
+            reservation_status: 'BLOCKED',
+            blocked_at: now,
+            expires_at: expiresAt,
+          }, { transaction });
+          console.log(`[createBlock] Successfully created block on retry for seat ${seatId}`);
+          return retryReservation;
+        } else {
+          console.log(`[createBlock] Latest reservation for seat ${seatId} is still active: ${latestReservation.reservation_status}`);
+          throw new Error('Seat is already reserved or blocked');
+        }
+      }
+    }
+    throw err;
+  }
 };
 
 /**
@@ -461,7 +513,7 @@ SeatReservation.findActiveBySeat = async function(seatId) {
     where: {
       seat_id: seatId,
       reservation_status: {
-        [sequelize.Op.in]: ['BLOCKED', 'CONFIRMED'],
+        [Op.in]: ['BLOCKED', 'CONFIRMED'],
       },
     },
     order: [['created_at', 'DESC']], // Get most recent
@@ -485,21 +537,23 @@ SeatReservation.findExpiredBlocks = async function() {
     include: [{
       model: require('./Seat'),
       as: 'seat',
-      attributes: ['id', 'row_number', 'seat_number'],
+      attributes: ['id', 'row_number', 'seat_number', 'show_id'],
     }],
   });
 };
 
 /**
  * Cleanup expired blocks and release seats
+ * @param {Transaction} outerTransaction - Optional outer transaction to reuse (prevents deadlocks)
  * @returns {Promise<number>} Number of reservations cleaned up
  */
-SeatReservation.cleanupExpiredBlocks = async function() {
-  const transaction = await sequelize.transaction();
+SeatReservation.cleanupExpiredBlocks = async function(outerTransaction = null) {
+  const transaction = outerTransaction || await sequelize.transaction();
   
   try {
     const expiredReservations = await this.findExpiredBlocks();
     let cleanupCount = 0;
+    const showReleaseCounts = {};
     
     for (const reservation of expiredReservations) {
       // Expire the reservation
@@ -513,18 +567,43 @@ SeatReservation.cleanupExpiredBlocks = async function() {
         { is_available: true },
         { 
           where: { id: reservation.seat_id },
-          transaction 
+          transaction,
+          validate: false // skip validators when toggling availability during cleanup
         }
       );
+
+      // Track how many seats we free per show to restore availability counters
+      const showId = reservation.seat?.show_id;
+      if (showId) {
+        showReleaseCounts[showId] = (showReleaseCounts[showId] || 0) + 1;
+      }
       
       cleanupCount++;
     }
+
+    // Restore available_seats counts for affected shows using safe SQL update
+    // Use MIN to cap at total_seats to prevent overflow
+    const Show = require('./Show');
+    for (const [showId, count] of Object.entries(showReleaseCounts)) {
+      await sequelize.query(
+        'UPDATE shows SET available_seats = LEAST(available_seats + :count, total_seats) WHERE id = :showId',
+        {
+          replacements: { count, showId },
+          transaction,
+          type: sequelize.QueryTypes.UPDATE,
+        }
+      );
+    }
     
-    await transaction.commit();
+    if (!outerTransaction) {
+      await transaction.commit();
+    }
     return cleanupCount;
     
   } catch (error) {
-    await transaction.rollback();
+    if (!outerTransaction) {
+      await transaction.rollback();
+    }
     throw new Error(`Failed to cleanup expired blocks: ${error.message}`);
   }
 };
@@ -575,14 +654,14 @@ SeatReservation.getReservationStats = async function(startDate, endDate) {
  * @param {number} durationMinutes - Block duration in minutes
  * @returns {Promise<Array>} Array of created reservations
  */
-SeatReservation.blockMultipleSeats = async function(seatIds, durationMinutes = 5) {
-  const transaction = await sequelize.transaction();
+SeatReservation.blockMultipleSeats = async function(seatIds, durationMinutes = 5, outerTransaction = null) {
+  const transaction = outerTransaction || await sequelize.transaction();
   
   try {
     const reservations = [];
     
     for (const seatId of seatIds) {
-      const reservation = await this.createBlock(seatId, durationMinutes);
+      const reservation = await this.createBlock(seatId, durationMinutes, transaction);
       reservations.push(reservation);
       
       // Update seat availability
@@ -591,16 +670,29 @@ SeatReservation.blockMultipleSeats = async function(seatIds, durationMinutes = 5
         { is_available: false },
         { 
           where: { id: seatId },
-          transaction 
+          transaction,
+          validate: false // avoid row_number validator when only toggling availability
         }
       );
     }
     
-    await transaction.commit();
+    if (!outerTransaction) {
+      await transaction.commit();
+    }
     return reservations;
     
   } catch (error) {
-    await transaction.rollback();
+    console.log('🔴 blockMultipleSeats caught error:');
+    console.log('  Error message:', error.message);
+    console.log('  Error name:', error.name);
+    console.log('  Full error:', error);
+    if (error.errors) {
+      console.log('  Validation errors:', error.errors);
+    }
+    
+    if (!outerTransaction) {
+      await transaction.rollback();
+    }
     throw new Error(`Failed to block seats: ${error.message}`);
   }
 };

@@ -8,28 +8,116 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [app.js] File loading started...');
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION:');
+  console.error('Name:', error.name);
+  console.error('Message:', error.message);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+});
+
 const express = require('express');
+console.log('✅ [app.js] express loaded');
+
 const cors = require('cors');
+console.log('✅ [app.js] cors loaded');
+
 const helmet = require('helmet');
+console.log('✅ [app.js] helmet loaded');
+
 const rateLimit = require('express-rate-limit');
+console.log('✅ [app.js] express-rate-limit loaded');
+
 const session = require('express-session');
+console.log('✅ [app.js] express-session loaded');
+
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
+console.log('✅ [app.js] connect-session-sequelize loaded');
+
 require('dotenv').config();
+console.log('✅ [app.js] dotenv configured');
 
 // Import database connection and models
+console.log('🛠️ [app.js] About to load models...');
 const { sequelize, initializeDatabase, healthCheck } = require('./models');
+console.log('✅ [app.js] models loaded');
 
 // Import middleware
+console.log('🛠️ [app.js] About to load middleware...');
 const logger = require('./middleware/logger');
+console.log('✅ [app.js] logger loaded');
 const errorHandler = require('./middleware/errorHandler');
+console.log('✅ [app.js] errorHandler loaded');
 const requestValidator = require('./middleware/requestValidator');
+console.log('✅ [app.js] requestValidator loaded');
 
 // Import routes
-const movieRoutes = require('./routes/movieRoutes');
-const showRoutes = require('./routes/showRoutes');
-const seatRoutes = require('./routes/seatRoutes');
-const bookingRoutes = require('./routes/bookingRoutes');
-const healthRoutes = require('./routes/healthRoutes');
+// console.log('🛠️ [app.js] About to load routes...');
+// const movieRoutes = require('./routes/movieRoutes');
+// console.log('✅ [app.js] movieRoutes loaded');
+// const showRoutes = require('./routes/showRoutes');
+// console.log('✅ [app.js] showRoutes loaded');
+// const seatRoutes = require('./routes/seatRoutes');
+// console.log('✅ [app.js] seatRoutes loaded');
+// const bookingRoutes = require('./routes/bookingRoutes');
+// console.log('✅ [app.js] bookingRoutes loaded');
+// const healthRoutes = require('./routes/healthRoutes');
+// console.log('✅ [app.js] healthRoutes loaded');
+
+// Import routes
+console.log('🛠️ [app.js] About to load routes...');
+
+let movieRoutes, showRoutes, seatRoutes, bookingRoutes, healthRoutes;
+
+try {
+  movieRoutes = require('./routes/movieRoutes');
+  console.log('✅ [app.js] movieRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load movieRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  showRoutes = require('./routes/showRoutes');
+  console.log('✅ [app.js] showRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load showRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  seatRoutes = require('./routes/seatRoutes');
+  console.log('✅ [app.js] seatRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load seatRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  bookingRoutes = require('./routes/bookingRoutes');
+  console.log('✅ [app.js] bookingRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load bookingRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+try {
+  healthRoutes = require('./routes/healthRoutes');
+  console.log('✅ [app.js] healthRoutes loaded');
+} catch (error) {
+  console.error('❌ [app.js] FAILED to load healthRoutes:', error.message);
+  console.error('Stack:', error.stack);
+  throw error;
+}
+
+
+console.log('✅ [app.js] ALL MODULES LOADED SUCCESSFULLY!');
 
 /**
  * Create Express application instance
@@ -42,7 +130,8 @@ const app = express();
  */
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
+// Remove trailing slash from FRONTEND_URL to prevent CORS issues
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 /**
  * Trust proxy (important for deployment behind reverse proxy)
@@ -74,15 +163,17 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     // Allow frontend URL and localhost for development
     const allowedOrigins = [
       FRONTEND_URL,
       'http://localhost:3001',
       'http://localhost:3000',
+      'http://localhost:5173', // Vite dev server
     ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
+
+    // Check if origin is in allowed list OR is a Vercel preview deployment
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -116,13 +207,13 @@ app.use('/api/', limiter);
  * 
  * @description Parse incoming request bodies
  */
-app.use(express.json({ 
+app.use(express.json({
   limit: '10mb',
   type: 'application/json',
 }));
 
-app.use(express.urlencoded({ 
-  extended: true, 
+app.use(express.urlencoded({
+  extended: true,
   limit: '10mb',
 }));
 
@@ -150,7 +241,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: NODE_ENV === 'production', // Use secure cookies in production
+    // secure: NODE_ENV === 'production', // Use secure cookies in production
+    secure: false, // Use secure cookies in production
     httpOnly: true, // Prevent XSS
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax',
@@ -240,22 +332,40 @@ app.use(errorHandler.globalErrorHandler);
  */
 const startServer = async () => {
   try {
-    console.log('🚀 Starting BookMyShow Clone API Server...');
+    console.log('========================================');
+    console.log('🚀 STEP 1: Starting BookMyShow Clone API Server...');
     console.log(`📊 Environment: ${NODE_ENV}`);
-    
+    console.log(`📍 PORT: ${PORT}`);
+    console.log(`📍 FRONTEND_URL: ${FRONTEND_URL}`);
+    console.log('========================================');
+
     // Initialize database
-    await initializeDatabase();
-    
-    // Create session store table
-    await sessionStore.sync();
-    console.log('✅ Session store initialized');
-    
+    console.log('🚀 STEP 2: About to call initializeDatabase()...');
+    try {
+      await initializeDatabase();
+      console.log('✅ STEP 2 COMPLETE: Database initialized successfully');
+    } catch (dbError) {
+      console.error('❌ STEP 2 FAILED: Database initialization error');
+      console.error('Error name:', dbError.name);
+      console.error('Error message:', dbError.message);
+      console.error('Error stack:', dbError.stack);
+      throw dbError;
+    }
+
+    // Session store will auto-create the table on first use
+    console.log('✅ STEP 3 COMPLETE: Session store configured (table will be created on first use)');
+
     // Start server
-    const server = app.listen(PORT, () => {
+    console.log('🚀 STEP 4: About to start HTTP server...');
+    console.log(`Binding to 0.0.0.0:${PORT}...`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log('========================================');
+      console.log('✅ ✅ ✅ SERVER STARTED SUCCESSFULLY! ✅ ✅ ✅');
       console.log(`🌐 Server running on port ${PORT}`);
       console.log(`🔗 API Base URL: http://localhost:${PORT}/api/${API_VERSION}`);
       console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
       console.log(`📚 Welcome: http://localhost:${PORT}/`);
+      console.log('========================================');
     });
 
     /**
@@ -265,46 +375,65 @@ const startServer = async () => {
      */
     const gracefulShutdown = (signal) => {
       console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
-      
+
       server.close(async () => {
         console.log('📴 HTTP server closed');
-        
+
         try {
           await sequelize.close();
           console.log('📴 Database connections closed');
           console.log('✅ Graceful shutdown completed');
-          process.exit(0);
+          // process.exit(0);
         } catch (error) {
           console.error('❌ Error during shutdown:', error.message);
-          process.exit(1);
+          // process.exit(1);
         }
       });
-      
+
       // Force shutdown after 30 seconds
       setTimeout(() => {
         console.error('⏰ Could not close connections in time, forcefully shutting down');
-        process.exit(1);
+        // process.exit(1);
       }, 30000);
     };
 
     // Handle shutdown signals
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    // process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    // process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
     return server;
-    
+
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
-    process.exit(1);
+    console.error('❌ CRITICAL: Failed to start server', error);
+    console.error('Error message:', error.message);
+    console.error('Stack trace:', error.stack);
+    // process.exit(1);
   }
 };
+
+// Catch unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  // process.exit(1);
+});
 
 // Export app for testing and server instance for direct execution
 module.exports = app;
 
 // Start server if this file is run directly
+console.log('🔧 [app.js] Checking if file is main module...');
+console.log('require.main === module:', require.main === module);
+
 if (require.main === module) {
-  startServer();
+  console.log('✅ [app.js] File IS main module, calling startServer()...');
+  startServer().catch(error => {
+    console.error('❌ Fatal error during startup:', error);
+    console.error('Error stack:', error.stack);
+    process.exit(1);
+  });
+} else {
+  console.log('ℹ️ [app.js] File is NOT main module, exporting app only');
 }
 
 /**

@@ -31,7 +31,11 @@ import {
 } from '@/types/api';
 
 // API Configuration
-const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api/v1';
+const MODE = import.meta.env.MODE;
+const API_BASE_URL = MODE === 'development'
+  ? '/api/v1' // Use Vite proxy to local backend in development (port 3004)
+  : (import.meta.env.VITE_API_BASE_URL || "https://bookmyshow-production-f9f3.up.railway.app/api/v1");
+console.log("API BASE URL:", API_BASE_URL, "MODE:", MODE);
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 /**
@@ -51,7 +55,7 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     (config) => {
       // Log outgoing requests in development
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
           params: config.params,
           data: config.data,
@@ -70,7 +74,7 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       // Log successful responses in development
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
           status: response.status,
           data: response.data,
@@ -160,8 +164,27 @@ export const movieApi = {
    */
   getMovies: async (filters: MovieFilters = {}): Promise<MoviesResponse> => {
     const queryParams = buildQueryParams(filters as unknown as QueryParams);
-    const response = await apiClient.get<ApiResponse<MoviesResponse>>(`/movies${queryParams}`);
-    return response.data.data;
+    const response = await apiClient.get<ApiResponse<any>>(`/movies${queryParams}`);
+    const raw = response.data.data as any;
+    const movies = (raw.movies || []).map((m: any) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      genre: m.genre,
+      duration: m.duration,
+      durationFormatted: `${m.duration} mins`,
+      rating: m.rating,
+      ratingFormatted: m.rating ? `${m.rating}/10` : 'Not Rated',
+      posterUrl: m.poster_url || m.posterUrl,
+      releaseDate: m.release_date || m.releaseDate,
+      language: m.language,
+      createdAt: m.created_at || m.createdAt,
+    }));
+    return {
+      movies,
+      pagination: raw.pagination,
+      filters: raw.filters,
+    } as MoviesResponse;
   },
 
   /**
@@ -217,8 +240,26 @@ export const showApi = {
    * Get show by ID
    */
   getShowById: async (id: string): Promise<ShowDetails> => {
-    const response = await apiClient.get<ApiResponse<ShowDetails>>(`/shows/${id}`);
-    return response.data.data;
+    const response = await apiClient.get<ApiResponse<any>>(`/shows/${id}`);
+    const raw = response.data.data as any;
+    const s = raw.show;
+    const flattened: ShowDetails = {
+      id: s.id,
+      showDate: s.showDate || s.show_date,
+      showTime: s.showTime || s.show_time,
+      showDateTime: s.showDateTime || `${s.show_date}T${s.show_time}`,
+      hallName: s.hallName || s.hall_name,
+      totalSeats: raw.seating?.totalSeats ?? s.totalSeats ?? 0,
+      availableSeats: raw.seating?.availableSeats ?? s.availableSeats ?? 0,
+      price: Number(s.price),
+      priceFormatted: s.priceFormatted || `₹${s.price}`,
+      status: s.status,
+      timeUntilShow: s.timeUntilShow,
+      movie: raw.movie,
+      seating: raw.seating,
+      booking: raw.booking,
+    };
+    return flattened;
   },
 
   /**

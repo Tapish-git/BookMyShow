@@ -8,17 +8,23 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [seatController.js] Loading...');
 const { Seat, Show, SeatReservation, Movie } = require('../models');
-const { 
-  asyncHandler, 
-  NotFoundError, 
+const { Op } = require('sequelize');
+console.log('✅ [seatController.js] Models loaded');
+const {
+  asyncHandler,
+  NotFoundError,
   BusinessLogicError,
   ConflictError,
   createSeatConflictError,
-  createExpiredBlockError 
+  createExpiredBlockError
 } = require('../middleware/errorHandler');
+console.log('✅ [seatController.js] Error handlers loaded');
 const { logBusinessEvent, logPerformance, logSecurityEvent } = require('../middleware/logger');
+console.log('✅ [seatController.js] Logger loaded');
 const { sequelize } = require('../config/database');
+console.log('✅ [seatController.js] ALL IMPORTS COMPLETE!');
 
 /**
  * Get seat layout for a show
@@ -54,7 +60,7 @@ const getSeatLayout = asyncHandler(async (req, res) => {
 
     // Get seat layout with current availability
     const seatLayout = await Seat.getSeatLayout(showId);
-    
+
     // Filter by availability if requested
     let filteredLayout = seatLayout;
     if (availableOnly) {
@@ -143,6 +149,9 @@ const blockSeats = asyncHandler(async (req, res) => {
   const startTime = Date.now();
   const { showId, seatIds, blockDuration = 5 } = req.body;
 
+  console.log('\n=== 🔵 BLOCK SEATS - START ===');
+  console.log('Request payload:', { showId, seatIds, blockDuration });
+
   // Validate input
   if (!seatIds || seatIds.length === 0) {
     throw new BusinessLogicError('At least one seat must be selected');
@@ -155,14 +164,20 @@ const blockSeats = asyncHandler(async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    // Verify show exists and is bookable
-    const show = await Show.findByPk(showId, { transaction });
+    console.log('✓ Transaction created');
+
+    // Verify show exists and is bookable; lock the row to prevent race conditions
+    const show = await Show.findByPk(showId, { transaction, lock: transaction.LOCK.UPDATE });
+    console.log('✓ Show fetched with lock:', { id: show?.id, available_seats: show?.available_seats, total_seats: show?.total_seats });
+
     if (!show) {
       throw new NotFoundError('Show', showId);
     }
 
     // Check if show is in the future
     const showDateTime = new Date(`${show.show_date}T${show.show_time}`);
+    console.log('Show time check:', { showDate: show.show_date, showTime: show.show_time, showDateTime: showDateTime.toISOString(), now: new Date().toISOString(), isFuture: showDateTime > new Date() });
+
     if (showDateTime <= new Date()) {
       throw new BusinessLogicError('Cannot block seats for past shows');
     }
@@ -176,6 +191,8 @@ const blockSeats = asyncHandler(async (req, res) => {
       transaction,
     });
 
+    console.log('✓ Seats fetched:', { requestedCount: seatIds.length, foundCount: seats.length });
+
     if (seats.length !== seatIds.length) {
       const foundSeatIds = seats.map(s => s.id);
       const missingSeatIds = seatIds.filter(id => !foundSeatIds.includes(id));
@@ -183,20 +200,25 @@ const blockSeats = asyncHandler(async (req, res) => {
     }
 
     // Check if show has enough available seats
+    console.log('Availability check:', { available_seats: show.available_seats, requested_seats: seatIds.length });
+
     if (show.available_seats < seatIds.length) {
       throw new BusinessLogicError(
         `Show only has ${show.available_seats} available seats, but ${seatIds.length} were requested`
       );
     }
 
-    // Clean up any expired blocks first
-    await SeatReservation.cleanupExpiredBlocks();
+    // Clean up any expired blocks first (using the same transaction to avoid deadlocks)
+    console.log('⏳ Cleaning up expired blocks...');
+    const cleanedCount = await SeatReservation.cleanupExpiredBlocks(transaction);
+    console.log(`✓ Cleaned up ${cleanedCount} expired blocks`);
 
     // Check for existing active reservations
+    console.log('🔍 Checking for existing reservations...');
     const existingReservations = await SeatReservation.findAll({
       where: {
-        seat_id: seatIds,
-        reservation_status: ['BLOCKED', 'CONFIRMED'],
+        seat_id: { [Op.in]: seatIds },
+        reservation_status: { [Op.in]: ['BLOCKED', 'CONFIRMED'] },
       },
       include: [{
         model: Seat,
@@ -206,24 +228,30 @@ const blockSeats = asyncHandler(async (req, res) => {
       transaction,
     });
 
+    console.log(`✓ Found ${existingReservations.length} existing reservations`);
+
     // Filter out expired blocks
     const activeReservations = existingReservations.filter(reservation => {
       if (reservation.reservation_status === 'CONFIRMED') {
         return true; // Confirmed reservations are always active
       }
-      
+
       if (reservation.reservation_status === 'BLOCKED') {
         return new Date() < reservation.expires_at; // Check if block hasn't expired
       }
-      
+
       return false;
     });
 
+    console.log(`✓ Active reservations after filtering: ${activeReservations.length}`);
+
     if (activeReservations.length > 0) {
-      const conflictSeats = activeReservations.map(res => 
+      const conflictSeats = activeReservations.map(res =>
         `${res.seat.row_number}${res.seat.seat_number}`
       ).join(', ');
-      
+
+      console.log('❌ CONFLICT:', conflictSeats);
+
       throw createSeatConflictError(
         conflictSeats,
         `Seats ${conflictSeats} are already reserved or blocked by another user`
@@ -231,15 +259,56 @@ const blockSeats = asyncHandler(async (req, res) => {
     }
 
     // Block all seats atomically
-    const blockedReservations = await SeatReservation.blockMultipleSeats(
-      seatIds, 
-      blockDuration
+    console.log('🔒 Blocking multiple seats...');
+    let blockedReservations;
+    try {
+      blockedReservations = await SeatReservation.blockMultipleSeats(
+        seatIds,
+        blockDuration,
+        transaction
+      );
+      console.log(`✓ Blocked ${blockedReservations.length} seats`);
+    } catch (err) {
+      // Normalize model-layer errors to API errors for consistent responses
+      console.log('❌ Error during blockMultipleSeats:', err.message);
+      const msg = err?.message || '';
+      if (msg.includes('Seat is already reserved or blocked')) {
+        const conflictSeats = (err.details?.seats || seatIds).join(', ');
+        throw createSeatConflictError(conflictSeats, 'One or more seats are already reserved or blocked');
+      }
+      if (msg.startsWith('Failed to block seats')) {
+        throw new BusinessLogicError('Unable to block selected seats. Please try again.');
+      }
+      throw err; // rethrow unknown errors
+    }
+
+    // Update show available seat count atomically using SQL condition
+    console.log('📊 Updating available seats count...');
+    console.log(`   Current available_seats: ${show.available_seats}, decrementing by: ${seatIds.length}`);
+
+    const [affectedRows] = await sequelize.query(
+      'UPDATE shows SET available_seats = available_seats - :seatCount WHERE id = :showId AND available_seats >= :seatCount',
+      {
+        replacements: { seatCount: seatIds.length, showId: showId },
+        transaction,
+        type: sequelize.QueryTypes.UPDATE,
+      }
     );
 
-    // Update show available seat count
-    await show.updateAvailableSeats(-seatIds.length);
+    console.log(`✓ SQL UPDATE affected rows: ${affectedRows}`);
+
+    if (affectedRows === 0) {
+      console.log('❌ UPDATE affected 0 rows - availability check failed');
+      throw new BusinessLogicError('Insufficient seats available. Please refresh and try again.');
+    }
+
+    // Reload show to get updated available_seats count
+    console.log('🔄 Reloading show...');
+    await show.reload({ transaction });
+    console.log(`✓ Show reloaded. New available_seats: ${show.available_seats}`);
 
     await transaction.commit();
+    console.log('✅ Transaction committed');
 
     // Prepare response
     const blockedSeatsInfo = blockedReservations.map((reservation, index) => ({
@@ -269,6 +338,8 @@ const blockSeats = asyncHandler(async (req, res) => {
       clientIp: req.ip,
     });
 
+    console.log('=== 🟢 BLOCK SEATS - SUCCESS ===\n');
+
     res.status(201).json({
       success: true,
       data: {
@@ -280,7 +351,7 @@ const blockSeats = asyncHandler(async (req, res) => {
         },
         showInfo: {
           id: show.id,
-          availableSeats: show.available_seats - seatIds.length, // Updated count
+          availableSeats: show.available_seats, // Updated count after atomic save
           price: show.price,
           totalAmount: (show.price * seatIds.length).toFixed(2),
         },
@@ -290,8 +361,15 @@ const blockSeats = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
+    console.log('=== 🔴 BLOCK SEATS - ERROR ===');
+    console.log('Error type:', error.constructor.name);
+    console.log('Error message:', error.message);
+    console.log('Error details:', error.details);
+    console.log('Full error:', error);
+
     await transaction.rollback();
-    
+    console.log('✓ Transaction rolled back');
+
     logPerformance('blockSeats', Date.now() - startTime, {
       showId,
       seatCount: seatIds ? seatIds.length : 0,
@@ -307,7 +385,21 @@ const blockSeats = asyncHandler(async (req, res) => {
         userAgent: req.get('User-Agent'),
       }, req);
     }
-    
+
+    // Convert generic errors to consistent API errors where possible
+    const msg = error?.message || '';
+    if (msg.includes('Seat is already reserved or blocked')) {
+      const conflictSeats = seatIds.join(', ');
+      throw createSeatConflictError(conflictSeats, 'One or more seats are already reserved or blocked');
+    }
+    if (msg.startsWith('Failed to block seats')) {
+      throw new BusinessLogicError('Unable to block selected seats. Please try again.');
+    }
+    if (msg.includes('Cannot reduce available seats below zero') || msg.includes('Available seats cannot exceed total seats')) {
+      throw new BusinessLogicError('Invalid seat availability update detected.');
+    }
+
+    console.log('=== 🔴 END ===\n');
     throw error;
   }
 });
@@ -365,16 +457,16 @@ const releaseSeats = asyncHandler(async (req, res) => {
 
     // Group by show for efficient seat count updates
     const showUpdates = {};
-    
+
     // Release each reservation
     const releasedSeats = [];
     for (const reservation of blockedReservations) {
-      await reservation.update({ 
-        reservation_status: 'EXPIRED' 
+      await reservation.update({
+        reservation_status: 'EXPIRED'
       }, { transaction });
-      
-      await reservation.seat.update({ 
-        is_available: true 
+
+      await reservation.seat.update({
+        is_available: true
       }, { transaction });
 
       // Track show updates
@@ -394,7 +486,7 @@ const releaseSeats = asyncHandler(async (req, res) => {
     // Update available seat counts for affected shows
     for (const [showId, count] of Object.entries(showUpdates)) {
       const show = await Show.findByPk(showId, { transaction });
-      await show.updateAvailableSeats(count);
+      await show.updateAvailableSeats(count, { transaction });
     }
 
     await transaction.commit();
@@ -430,12 +522,12 @@ const releaseSeats = asyncHandler(async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    
+
     logPerformance('releaseSeats', Date.now() - startTime, {
       seatCount: seatIds ? seatIds.length : 0,
       error: error.message,
     });
-    
+
     throw error;
   }
 });
@@ -564,7 +656,7 @@ const extendSeatBlock = asyncHandler(async (req, res) => {
     // Check if any blocks have expired
     const expiredReservations = reservations.filter(res => res.hasExpired());
     if (expiredReservations.length > 0) {
-      const expiredSeats = expiredReservations.map(res => 
+      const expiredSeats = expiredReservations.map(res =>
         res.seat.getSeatIdentifier()
       ).join(', ');
       throw createExpiredBlockError(expiredSeats);

@@ -8,17 +8,24 @@
  * @version 1.0.0
  */
 
+console.log('🔧 [bookingController.js] Loading...');
 const { Booking, Show, Movie, Seat, SeatReservation } = require('../models');
-const { 
-  asyncHandler, 
-  NotFoundError, 
+console.log('✅ [bookingController.js] Models loaded');
+const {
+  asyncHandler,
+  NotFoundError,
   BusinessLogicError,
   ConflictError,
   createExpiredBlockError,
   createCapacityError
 } = require('../middleware/errorHandler');
+console.log('✅ [bookingController.js] Error handlers loaded');
 const { logBusinessEvent, logPerformance, logSecurityEvent } = require('../middleware/logger');
+console.log('✅ [bookingController.js] Logger loaded');
 const { sequelize } = require('../config/database');
+console.log('✅ [bookingController.js] Database loaded');
+const { Op } = require('sequelize');
+console.log('✅ [bookingController.js] ALL IMPORTS COMPLETE!');
 
 /**
  * Create a new booking
@@ -98,7 +105,7 @@ const createBooking = asyncHandler(async (req, res) => {
     if (seatReservations.length !== seatIds.length) {
       const foundSeatIds = seatReservations.map(res => res.seat_id);
       const missingSeatIds = seatIds.filter(id => !foundSeatIds.includes(id));
-      
+
       throw new BusinessLogicError(
         `Some seats are not available for booking. Missing or not blocked: ${missingSeatIds.join(', ')}`
       );
@@ -107,7 +114,7 @@ const createBooking = asyncHandler(async (req, res) => {
     // Check if any blocks have expired
     const expiredBlocks = seatReservations.filter(res => new Date() > res.expires_at);
     if (expiredBlocks.length > 0) {
-      const expiredSeats = expiredBlocks.map(res => 
+      const expiredSeats = expiredBlocks.map(res =>
         `${res.seat.row_number}${res.seat.seat_number}`
       ).join(', ');
       throw createExpiredBlockError(expiredSeats);
@@ -129,7 +136,7 @@ const createBooking = asyncHandler(async (req, res) => {
         show_id: showId,
         booking_status: 'CONFIRMED',
         created_at: {
-          [sequelize.Op.gte]: new Date(Date.now() - (10 * 60 * 1000)), // Last 10 minutes
+          [Op.gte]: new Date(Date.now() - (10 * 60 * 1000)), // Last 10 minutes
         },
       },
       transaction,
@@ -149,6 +156,10 @@ const createBooking = asyncHandler(async (req, res) => {
     }
 
     // Create the booking
+    console.log('\n=== 📋 CREATE BOOKING - START ===');
+    console.log('Request data:', { showId, seatIds, userDetails });
+    console.log('Booking data to create:', { total_seats: seatIds.length, total_amount: totalAmount, user_email: email });
+
     const bookingData = {
       show_id: showId,
       user_email: email,
@@ -161,6 +172,7 @@ const createBooking = asyncHandler(async (req, res) => {
     };
 
     const booking = await Booking.create(bookingData, { transaction });
+    console.log('✓ Booking created:', { id: booking.id, reference: booking.booking_reference, total_amount: booking.total_amount });
 
     // Confirm all seat reservations
     const confirmedSeats = [];
@@ -247,14 +259,14 @@ const createBooking = asyncHandler(async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    
+
     logPerformance('createBooking', Date.now() - startTime, {
       showId,
       seatCount: seatIds ? seatIds.length : 0,
       userEmail: userDetails?.email,
       error: error.message,
     });
-    
+
     throw error;
   }
 });
@@ -371,7 +383,7 @@ const getUserBookings = asyncHandler(async (req, res) => {
 
   try {
     const bookings = await Booking.findByUserEmail(email, parseInt(limit));
-    
+
     // Calculate pagination (simplified since we're using limit)
     const offset = (page - 1) * limit;
     const paginatedBookings = bookings.slice(offset, offset + parseInt(limit));
@@ -539,7 +551,7 @@ const getBookingStats = asyncHandler(async (req, res) => {
 
   try {
     const stats = await Booking.getBookingStats(start, end);
-    
+
     // Get seat reservation statistics
     const seatStats = await SeatReservation.getReservationStats(start, end);
 
@@ -565,11 +577,11 @@ const getBookingStats = asyncHandler(async (req, res) => {
         },
         reservations: seatStats,
         metrics: {
-          conversionRate: seatStats.total > 0 ? 
-            ((seatStats.confirmed / seatStats.total) * 100).toFixed(2) + '%' : 
+          conversionRate: seatStats.total > 0 ?
+            ((seatStats.confirmed / seatStats.total) * 100).toFixed(2) + '%' :
             '0%',
-          blockExpiryRate: seatStats.total > 0 ? 
-            ((seatStats.expired / seatStats.total) * 100).toFixed(2) + '%' : 
+          blockExpiryRate: seatStats.total > 0 ?
+            ((seatStats.expired / seatStats.total) * 100).toFixed(2) + '%' :
             '0%',
         },
       },

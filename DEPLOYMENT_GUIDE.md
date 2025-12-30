@@ -11,10 +11,11 @@ Complete setup and deployment guide for running the BookMyShow clone on a differ
 - **Code Editor**: VS Code (recommended) or any preferred editor
 
 ### Cloud Accounts Required
-- **Railway**: For backend deployment
+- **Railway**: For backend and MySQL database hosting (includes $5/month free credits)
 - **Vercel**: For frontend deployment  
-- **PlanetScale**: For MySQL database hosting
 - **GitHub**: For code repository (if not already available)
+
+> **Note**: Railway's free tier provides $5 in monthly credits, which is sufficient for small learning projects. Monitor your usage in the Railway dashboard.
 
 ## 🚀 Step-by-Step Setup Guide
 
@@ -72,59 +73,237 @@ BookMyShow/
 └── DEPLOYMENT_GUIDE.md
 ```
 
-## 🗄️ Database Setup (PlanetScale)
+## 🗄️ Database Setup (Railway MySQL)
 
-### Step 3: Create PlanetScale Database
+### Step 3: Create Railway MySQL Database
 
-#### 3.1 Sign up for PlanetScale
-1. Go to https://planetscale.com/
-2. Create account using GitHub
-3. Click "Create database"
-4. Database name: `bookmyshow-db`
-5. Region: Choose closest to your location
+Railway makes it incredibly easy to provision a production-ready MySQL database. You'll create both your database and backend in the same Railway project.
 
-#### 3.2 Get Database Credentials
-1. Go to database dashboard
-2. Click "Connect" button
-3. Select "Node.js"
-4. Copy connection string (format: `mysql://username:password@host/database`)
+#### 3.1 Create Railway Account
+1. Go to https://railway.app/
+2. Click "Login" and sign in with your GitHub account
+3. Authorize Railway to access your GitHub account
+4. You'll receive $5 in free credits monthly for your projects
 
-#### 3.3 Initialize Database Schema
-```bash
-# Install PlanetScale CLI (optional)
-curl -fsSL https://github.com/planetscale/cli/releases/latest/download/pscale_linux_amd64.tar.gz | tar xz
+#### 3.2 Create New Project
+1. Once logged in, click "New Project" on the dashboard
+2. You'll see options to deploy from GitHub or provision databases
+3. Keep this window open - we'll add both database and backend to this project
 
-# Connect to database
-pscale connect bookmyshow-db main
+#### 3.3 Provision MySQL Database
+1. In your new project, click "New" → "Database" → "Add MySQL"
+2. Railway will automatically provision a MySQL 8.0 database
+3. Wait 30-60 seconds for the database to be ready (you'll see a green checkmark)
+4. Your database is now running and ready to use!
 
-# Or use the connection string directly in your app
+#### 3.4 Access Database Credentials
+
+Railway automatically generates all necessary environment variables for your MySQL database:
+
+1. Click on the MySQL service in your Railway project
+2. Go to the "Variables" tab
+3. You'll see these auto-generated variables:
+
+```env
+MYSQLHOST=containers-us-west-xxx.railway.app
+MYSQLPORT=6379
+MYSQLDATABASE=railway
+MYSQLUSER=root
+MYSQLPASSWORD=xxxxxxxxxxxx
+MYSQL_URL=mysql://root:xxxxxxxxxxxx@containers-us-west-xxx.railway.app:6379/railway
 ```
+
+> **Important**: These variables are automatically available to all services in the same Railway project. You don't need to copy them manually when deploying your backend in the same project.
+
+#### 3.5 Connect to Database (Optional - For Direct Access)
+
+You can connect to your Railway MySQL database using the Railway CLI or any MySQL client:
+
+**Option A: Using Railway CLI**
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Link to your project
+railway link
+
+# Connect to MySQL database
+railway connect MySQL
+```
+
+**Option B: Using MySQL Client**
+```bash
+# Using the connection URL from Railway
+mysql -h containers-us-west-xxx.railway.app \
+  -P 6379 \
+  -u root \
+  -p railway
+
+# Or using the MYSQL_URL directly
+mysql mysql://root:password@host:port/railway
+```
+
+**Option C: Using MySQL Workbench or DBeaver**
+1. Copy the connection details from Railway Variables tab
+2. Create a new connection in your MySQL client
+3. Use the following details:
+   - **Host**: Value of `MYSQLHOST`
+   - **Port**: Value of `MYSQLPORT`
+   - **Database**: Value of `MYSQLDATABASE`
+   - **Username**: Value of `MYSQLUSER`
+   - **Password**: Value of `MYSQLPASSWORD`
+
+#### 3.6 Initialize Database Schema
+
+Your backend application should handle database schema initialization automatically when it starts. However, if you need to manually create tables:
+
+**Method 1: Using your backend's migration scripts**
+```bash
+# After deploying backend (covered in next section)
+# Your app should auto-create tables on first run
+```
+
+**Method 2: Manual SQL execution**
+```bash
+# Connect via Railway CLI
+railway connect MySQL
+
+# Then run your SQL commands
+CREATE TABLE IF NOT EXISTS movies (...);
+CREATE TABLE IF NOT EXISTS theaters (...);
+-- etc.
+```
+
+#### 3.7 Understanding Railway MySQL Variables
+
+When you deploy your backend to the same Railway project, you can reference these MySQL variables using Railway's template syntax:
+
+- **Reference variable**: `${{MySQL.MYSQL_URL}}` - This automatically uses the database URL
+- **Individual variables**: `${{MySQL.MYSQLHOST}}`, `${{MySQL.MYSQLPORT}}`, etc.
+
+This means you don't need to hardcode any database credentials - Railway handles everything automatically!
 
 ## 🖥️ Backend Deployment (Railway)
 
-### Step 4: Prepare Backend for Deployment
+Now that your MySQL database is set up, let's deploy your backend application to the same Railway project.
 
-#### 4.1 Create Railway Account
-1. Go to https://railway.app/
-2. Sign up with GitHub
-3. Create new project
-4. Connect GitHub repository (or deploy from local)
+### Step 4: Deploy Backend to Railway
 
-#### 4.2 Backend Environment Variables
-Create these variables in Railway dashboard:
+#### 4.1 Prepare Your Backend Code
+
+Before deploying, ensure your backend code is ready:
+
+1. Navigate to your backend folder locally:
+```bash
+cd backend
+```
+
+2. Verify your `package.json` has the correct start script:
+```json
+{
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+```
+
+3. Ensure your database connection code can read from environment variables (DATABASE_URL or individual variables)
+
+#### 4.2 Deploy Backend - Method 1: GitHub Integration (Recommended)
+
+This method automatically deploys your backend whenever you push to GitHub.
+
+**Step 1: Push code to GitHub**
+```bash
+# If not already a git repository
+git init
+git add .
+git commit -m "Initial commit"
+
+# Create a new repository on GitHub, then:
+git remote add origin https://github.com/yourusername/BookMyShow.git
+git branch -M main
+git push -u origin main
+```
+
+**Step 2: Deploy from GitHub in Railway**
+1. Go to your Railway project (where you created the MySQL database)
+2. Click "New" → "GitHub Repo"
+3. Select your BookMyShow repository
+4. Railway will detect it's a monorepo and ask for the root directory
+5. Set **Root Directory** to: `backend`
+6. Click "Deploy"
+
+**Step 3: Wait for deployment**
+- Railway will automatically:
+  - Install dependencies (`npm install`)
+  - Build your app (if needed)
+  - Start your app using the `start` script
+- Watch the deployment logs in real-time
+- Deployment typically takes 2-5 minutes
+
+#### 4.3 Deploy Backend - Method 2: Railway CLI
+
+Deploy directly from your local machine using the Railway CLI.
+
+```bash
+# Navigate to backend folder
+cd backend
+
+# Install Railway CLI (if not already installed)
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Link to your existing project
+railway link
+# Select the project where you created the MySQL database
+
+# Deploy the backend
+railway up
+
+# Your backend is now deployed!
+```
+
+#### 4.4 Configure Environment Variables
+
+After deployment, you need to set environment variables for your backend service.
+
+**Step 1: Access environment variables**
+1. In Railway dashboard, click on your **backend service** (not the MySQL service)
+2. Go to the "Variables" tab
+3. Click "New Variable"
+
+**Step 2: Add required variables**
 
 ```env
-# Database Configuration (from PlanetScale)
-DATABASE_URL=mysql://username:password@host/database?sslaccept=strict
+# Database Configuration - Using Railway Variable References
+DATABASE_URL=${{MySQL.MYSQL_URL}}
+
+# Alternative: Use individual variables
+DB_HOST=${{MySQL.MYSQLHOST}}
+DB_PORT=${{MySQL.MYSQLPORT}}
+DB_NAME=${{MySQL.MYSQLDATABASE}}
+DB_USER=${{MySQL.MYSQLUSER}}
+DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
 
 # Server Configuration  
 NODE_ENV=production
 PORT=3000
 
 # Session Configuration
-SESSION_SECRET=your-super-secret-session-key-production
+SESSION_SECRET=your-super-secret-session-key-production-change-this
 
-# CORS Configuration
+# CORS Configuration (Update after deploying frontend)
 FRONTEND_URL=https://your-vercel-app.vercel.app
 
 # Application Configuration
@@ -135,37 +314,86 @@ LOG_LEVEL=info
 SEAT_BLOCK_DURATION_MINUTES=5
 ```
 
-#### 4.3 Railway Configuration File
-Create `railway.toml` in backend folder:
+> **Important Notes:**
+> - The `${{MySQL.MYSQL_URL}}` syntax automatically references your MySQL database's connection URL
+> - Railway will automatically restart your backend after you add/change variables
+> - Never commit sensitive values like SESSION_SECRET to your repository
+> - Update `FRONTEND_URL` after deploying your frontend (Step 8)
+
+**Step 3: Generate a secure SESSION_SECRET**
+```bash
+# Generate a random secret (use this value for SESSION_SECRET)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+#### 4.5 Access Your Backend URL
+
+Once deployed, Railway generates a public URL for your backend:
+
+1. Click on your backend service in Railway
+2. Go to "Settings" → "Networking"
+3. Click "Generate Domain"
+4. You'll get a URL like: `https://bookmyshow-backend-production.up.railway.app`
+5. Save this URL - you'll need it for:
+   - Frontend API configuration
+   - Testing your API endpoints
+
+#### 4.6 Verify Backend Deployment
+
+Test your backend to ensure it's working correctly:
+
+```bash
+# Check health endpoint
+curl https://your-backend.up.railway.app/health
+
+# Expected response:
+# {"status":"ok","timestamp":"2024-12-16T13:00:00.000Z"}
+
+# Test API endpoint (if available)
+curl https://your-backend.up.railway.app/api/v1/movies
+
+# Check database connection
+# Your backend logs should show successful database connection
+```
+
+**View Deployment Logs:**
+1. Click on your backend service in Railway
+2. Go to "Deployments" tab
+3. Click on the latest deployment
+4. View logs to check for errors
+
+#### 4.7 Configure Build Settings (Optional)
+
+If you need custom build settings:
+
+1. Create `railway.toml` in your backend folder:
 
 ```toml
 [build]
 builder = "nixpacks"
+buildCommand = "npm install"
 
 [deploy]
 startCommand = "npm start"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
 
 [environment]
 NODE_ENV = "production"
 ```
 
-#### 4.4 Update Backend package.json
-```json
-{
-  "scripts": {
-    "start": "node src/app.js",
-    "build": "echo 'No build step required'",
-    "dev": "nodemon src/app.js"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  }
-}
-```
+2. Commit and push this file to trigger a new deployment with these settings
+
+#### 4.8 Enable Auto-Deploy (GitHub Integration)
+
+If you deployed via GitHub:
+
+1. Go to backend service → "Settings" → "Service"
+2. Ensure "Auto-Deploy" is enabled
+3. Now every push to your main branch will automatically deploy
+4. View deployment status in Railway dashboard or through GitHub checks
 
 ## 🌐 Frontend Deployment (Vercel)
 
@@ -214,7 +442,7 @@ Create `vercel.json` in frontend folder:
 ```env
 # API Configuration
 VITE_API_BASE_URL=https://your-railway-app.railway.app/api/v1
-VITE_APP_NAME=BookMyShow Clone
+VITE_APP_NAME=BookMyShow
 VITE_APP_VERSION=1.0.0
 ```
 
@@ -312,6 +540,9 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 #### 6.3 Docker Compose
+
+> **Note**: This Docker Compose setup is for **local development only**. For production deployment, use Railway MySQL as described in Step 3 above.
+
 Create `docker-compose.yml` in root folder:
 
 ```yaml
@@ -369,29 +600,42 @@ volumes:
   mysql_data:
 ```
 
+**To run locally with Docker:**
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (clear database)
+docker-compose down -v
+```
+
 ## 🚀 Deployment Process
 
-### Step 7: Deploy Backend to Railway
+### Step 7: Complete Backend Deployment Checklist
 
+By now, you should have completed Steps 3 and 4 above. Here's a quick checklist:
+
+- ✅ Railway account created
+- ✅ Railway project created
+- ✅ MySQL database provisioned in Railway
+- ✅ Backend deployed to Railway (via GitHub or CLI)
+- ✅ Environment variables configured
+- ✅ Backend URL generated and tested
+
+If you haven't completed these steps, go back to **Step 3** and **Step 4** above.
+
+**Quick verification:**
 ```bash
-# Navigate to backend folder
-cd backend
+# Test your backend is live
+curl https://your-backend.up.railway.app/health
 
-# Install dependencies
-npm install
-
-# Test locally first
-cp .env.example .env
-# Edit .env with your database URL
-npm run dev
-
-# Deploy to Railway (using Railway CLI)
-npm install -g @railway/cli
-railway login
-railway link
-railway deploy
-
-# Or deploy via GitHub integration in Railway dashboard
+# Should return: {"status":"ok"}
 ```
 
 ### Step 8: Deploy Frontend to Vercel
@@ -449,13 +693,50 @@ curl https://your-backend.railway.app/api/v1/movies
 4. Verify booking creation
 
 #### 10.3 Check Database Connection
-```bash
-# Connect to PlanetScale database
-pscale shell bookmyshow-db main
 
-# Run basic queries
+You can verify your Railway MySQL database is properly connected to your backend:
+
+**Method 1: Check Backend Logs**
+```bash
+# View Railway backend logs
+railway logs
+
+# Look for messages like:
+# "Database connected successfully"
+# "MySQL connection established"
+```
+
+**Method 2: Connect via Railway CLI**
+```bash
+# Connect to Railway MySQL database directly
+railway connect MySQL
+
+# Once connected, run queries:
+SHOW DATABASES;
+USE railway;
 SHOW TABLES;
 SELECT COUNT(*) FROM movies;
+SELECT COUNT(*) FROM bookings;
+```
+
+**Method 3: Using MySQL Client**
+```bash
+# Get connection details from Railway Variables tab
+# Then connect using mysql client:
+
+mysql -h <MYSQLHOST> -P <MYSQLPORT> -u <MYSQLUSER> -p<MYSQLPASSWORD> <MYSQLDATABASE>
+
+# Or use the connection URL:
+mysql <MYSQL_URL>
+```
+
+**Method 4: Test via API**
+```bash
+# If your backend has a database test endpoint
+curl https://your-backend.up.railway.app/api/v1/health/db
+
+# Or check if data is being fetched correctly
+curl https://your-backend.up.railway.app/api/v1/movies
 ```
 
 ## 🔧 Troubleshooting
@@ -463,10 +744,57 @@ SELECT COUNT(*) FROM movies;
 ### Common Issues
 
 #### Database Connection Issues
+
+**Problem: Backend can't connect to MySQL database**
+
 ```bash
-# Check PlanetScale database status
-# Verify connection string format
-# Ensure SSL is enabled in connection
+# Solution 1: Verify environment variables are set correctly
+# In Railway dashboard -> Backend service -> Variables
+# Check that DATABASE_URL or individual DB variables are set
+
+# Solution 2: Ensure both services are in the same Railway project
+# Backend should use: DATABASE_URL=${{MySQL.MYSQL_URL}}
+
+# Solution 3: Check Railway MySQL service status
+# Go to Railway dashboard -> MySQL service
+# Ensure it shows a green checkmark (running)
+
+# Solution 4: Review backend deployment logs
+railway logs
+# Look for error messages like:
+# - "ECONNREFUSED" - MySQL service not running
+# - "Access denied" - Wrong credentials
+# - "Unknown database" - Database name mismatch
+```
+
+**Problem: "ER_NOT_SUPPORTED_AUTH_MODE" error**
+
+This occurs when MySQL client doesn't support the authentication method:
+
+```bash
+# Solution: Update your MySQL connection configuration
+# In your backend code, update the connection options:
+
+mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  authPlugins: {
+    mysql_clear_password: () => () => Buffer.from(process.env.DB_PASSWORD + '\0')
+  }
+})
+```
+
+**Problem: Connection timeout or slow queries**
+
+```bash
+# Check Railway MySQL service resource usage
+# Railway dashboard -> MySQL service -> Metrics
+# If using too much memory/CPU, consider:
+# 1. Optimizing your queries
+# 2. Adding database indexes
+# 3. Upgrading Railway plan for more resources
 ```
 
 #### CORS Errors
@@ -533,10 +861,12 @@ vercel logs
 ## 📞 Support Resources
 
 - **Railway Documentation**: https://docs.railway.app/
+  - **MySQL Guide**: https://docs.railway.app/databases/mysql
+  - **Environment Variables**: https://docs.railway.app/develop/variables
 - **Vercel Documentation**: https://vercel.com/docs
-- **PlanetScale Documentation**: https://planetscale.com/docs
 - **Node.js Documentation**: https://nodejs.org/docs/
 - **React Documentation**: https://react.dev/
+- **MySQL Documentation**: https://dev.mysql.com/doc/
 
 ## 🎉 Congratulations!
 

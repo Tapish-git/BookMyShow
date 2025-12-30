@@ -38,7 +38,7 @@ const Booking = sequelize.define('Booking', {
    */
   booking_reference: {
     type: DataTypes.STRING(20),
-    allowNull: false,
+    allowNull: true, // Temporarily allow null - will be generated in beforeCreate hook
     unique: true,
     validate: {
       len: {
@@ -152,8 +152,8 @@ const Booking = sequelize.define('Booking', {
     allowNull: false,
     validate: {
       min: {
-        args: 0,
-        msg: 'Total amount cannot be negative',
+        args: 50,
+        msg: 'Total amount must be at least ₹50',
       },
       max: {
         args: 50000.00,
@@ -372,7 +372,7 @@ Booking.prototype.cancelBooking = async function(reason = 'User cancellation') {
     // Update show available seats count
     const Show = require('./Show');
     const show = await Show.findByPk(this.show_id, { transaction });
-    await show.updateAvailableSeats(this.total_seats);
+    await show.updateAvailableSeats(this.total_seats, { transaction });
     
     await transaction.commit();
     

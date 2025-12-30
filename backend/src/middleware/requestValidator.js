@@ -150,7 +150,12 @@ const bookingSchemas = {
  */
 const validate = (schema, property = 'body') => {
   return (req, res, next) => {
-    const { error, value } = schema.validate(req[property], {
+    // Support passing plain object schema maps by wrapping with Joi.object()
+    const joiSchema = (schema && typeof schema.validate === 'function')
+      ? schema
+      : Joi.object(schema || {});
+
+    const { error, value } = joiSchema.validate(req[property], {
       abortEarly: false, // Return all validation errors
       stripUnknown: true, // Remove unknown properties
       convert: true, // Convert values to correct types

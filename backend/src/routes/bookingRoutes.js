@@ -90,7 +90,7 @@ router.get('/user/:email',
     keyGenerator: (req) => `user-bookings:${req.params.email}`,
   }),
   validate({
-    email: bookingSchemas.commonSchemas.email,
+    email: Joi.string().email().required(),
   }, 'params'),
   validate({
     page: Joi.number().integer().min(1).default(1),
@@ -176,7 +176,7 @@ router.get('/:reference/ticket',
   asyncHandler(async (req, res) => {
     // Delegate to booking controller but format response as ticket
     const originalJson = res.json;
-    res.json = function(data) {
+    res.json = function (data) {
       if (data.success && data.data.booking) {
         // Transform booking data to ticket format
         const ticketData = {
@@ -211,7 +211,7 @@ router.get('/:reference/ticket',
       }
       return originalJson.call(this, data);
     };
-    
+
     return bookingController.getBookingByReference(req, res);
   })
 );
