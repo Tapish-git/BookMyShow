@@ -107,7 +107,7 @@ const config = {
  * @description Returns database configuration based on NODE_ENV
  * @returns {Object} Database configuration for current environment
  */
-const env = process.env.NODE_ENV || 'development';
+const env = process.env.NODE_ENV || 'production';
 const dbConfig = config[env];
 
 /**

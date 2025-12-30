@@ -11,12 +11,10 @@ import {
     Chip,
     Stack,
     IconButton,
-    useTheme,
     alpha
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { 
-    PlayArrow, 
     Star, 
     ChevronLeft, 
     ChevronRight,
@@ -41,10 +39,8 @@ interface Movie {
 
 const HomePage: React.FC = () => {
     const [movies, setMovies] = useState<Movie[]>([]);
-    const [loading, setLoading] = useState(true);
     const [currentBanner, setCurrentBanner] = useState(0);
     const navigate = useNavigate();
-    const theme = useTheme();
 
     useEffect(() => {
         fetchMovies();
@@ -92,8 +88,6 @@ const HomePage: React.FC = () => {
         } catch (error) {
             console.error('Error fetching movies:', error);
             setMovies([]);
-        } finally {
-            setLoading(false);
         }
     };
 

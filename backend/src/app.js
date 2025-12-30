@@ -129,7 +129,7 @@ const app = express();
  * Configuration constants
  */
 const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = process.env.NODE_ENV || 'production';
 // Remove trailing slash from FRONTEND_URL to prevent CORS issues
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
