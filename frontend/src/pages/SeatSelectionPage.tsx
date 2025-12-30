@@ -9,7 +9,13 @@ import {
     CircularProgress,
     Alert,
     Paper,
-    Divider
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Snackbar
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { showApi, seatApi } from '@/services/api';
@@ -54,6 +60,28 @@ const SeatSelectionPage: React.FC = () => {
     const [blockedSeatIds, setBlockedSeatIds] = useState<string[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null); // seconds
     const [blockExpiry, setBlockExpiry] = useState<string | null>(null);
+    const [bookingInProgress, setBookingInProgress] = useState(false);
+    const [showUserDialog, setShowUserDialog] = useState(false);
+    const [userName, setUserName] = useState('');
+    const [userEmail, setUserEmail] = useState('');
+    const [userPhone, setUserPhone] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+
+    // Load saved user details from localStorage
+    useEffect(() => {
+        const savedUser = localStorage.getItem('bookMyShowUser');
+        if (savedUser) {
+            try {
+                const { name, email, phone } = JSON.parse(savedUser);
+                setUserName(name || '');
+                setUserEmail(email || '');
+                setUserPhone(phone || '');
+            } catch (e) {
+                console.error('Failed to parse saved user data');
+            }
+        }
+    }, []);
 
     useEffect(() => {
         const fetchShowAndSeats = async () => {
@@ -155,25 +183,65 @@ const SeatSelectionPage: React.FC = () => {
     const handleProceed = async () => {
         if (selectedSeats.length === 0 || !showId) return;
 
+        // Show user details dialog first
+        setShowUserDialog(true);
+    };
+
+    const handleConfirmBooking = async () => {
+        if (!userName.trim() || !userEmail.trim()) {
+            setSnackbarMessage('Please fill in your name and email');
+            setSnackbarOpen(true);
+            return;
+        }
+
+        if (!showId) {
+            setSnackbarMessage('Show ID is missing');
+            setSnackbarOpen(true);
+            return;
+        }
+
+        // Save user details to localStorage
+        localStorage.setItem('bookMyShowUser', JSON.stringify({
+            name: userName,
+            email: userEmail,
+            phone: userPhone
+        }));
+
+        setShowUserDialog(false);
+        setBookingInProgress(true);
+
         try {
             // Block all selected seats at once before booking
+            setSnackbarMessage('Blocking seats...');
+            setSnackbarOpen(true);
+            
             await seatApi.blockSeats({ showId, seatIds: selectedSeats, blockDuration: 5 });
             setBlockedSeatIds(selectedSeats);
 
             // Create booking immediately and navigate to confirmation
+            setSnackbarMessage('Creating booking...');
+            
             const booking = await (await import('@/services/api')).bookingApi.createBooking({
-                showId,
+                showId: showId!,
                 seatIds: selectedSeats,
                 userDetails: {
-                    name: 'Guest User',
-                    email: 'guest@example.com'
+                    name: userName,
+                    email: userEmail,
+                    phone: userPhone || undefined
                 }
             });
             const reference = booking.booking.reference;
-            navigate(`/booking/confirmation/${reference}`);
+            
+            setSnackbarMessage('Booking confirmed! Redirecting...');
+            setTimeout(() => {
+                navigate(`/booking/confirmation/${reference}`);
+            }, 1000);
         } catch (err: any) {
             console.error('❌ Booking failed:', err);
             setError(err?.error?.message || 'Failed to complete booking');
+            setSnackbarMessage('Booking failed. Please try again.');
+            setSnackbarOpen(true);
+            setBookingInProgress(false);
         }
     };
 
@@ -311,11 +379,12 @@ const SeatSelectionPage: React.FC = () => {
                                 <Button
                                     variant="contained"
                                     size="large"
-                                    disabled={selectedSeats.length === 0}
+                                    disabled={selectedSeats.length === 0 || bookingInProgress}
                                     onClick={handleProceed}
                                     fullWidth
+                                    startIcon={bookingInProgress ? <CircularProgress size={20} color="inherit" /> : null}
                                 >
-                                    Proceed to Book ({selectedSeats.length} seats)
+                                    {bookingInProgress ? 'Processing...' : `Proceed to Book (${selectedSeats.length} seats)`}
                                 </Button>
                             </Box>
                         </Grid>
@@ -329,6 +398,64 @@ const SeatSelectionPage: React.FC = () => {
                     </Button>
                 </Box>
             </Box>
+
+            {/* User Details Dialog */}
+            <Dialog open={showUserDialog} onClose={() => !bookingInProgress && setShowUserDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Enter Your Details</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                        <TextField
+                            label="Full Name"
+                            value={userName}
+                            onChange={(e) => setUserName(e.target.value)}
+                            required
+                            fullWidth
+                            disabled={bookingInProgress}
+                        />
+                        <TextField
+                            label="Email Address"
+                            type="email"
+                            value={userEmail}
+                            onChange={(e) => setUserEmail(e.target.value)}
+                            required
+                            fullWidth
+                            disabled={bookingInProgress}
+                        />
+                        <TextField
+                            label="Phone Number (Optional)"
+                            value={userPhone}
+                            onChange={(e) => setUserPhone(e.target.value)}
+                            fullWidth
+                            disabled={bookingInProgress}
+                        />
+                        <Alert severity="info">
+                            Your details will be saved for future bookings
+                        </Alert>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowUserDialog(false)} disabled={bookingInProgress}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleConfirmBooking} 
+                        variant="contained" 
+                        disabled={bookingInProgress}
+                        startIcon={bookingInProgress ? <CircularProgress size={20} color="inherit" /> : null}
+                    >
+                        {bookingInProgress ? 'Processing...' : `Confirm Booking (₹${totalPrice})`}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={() => setSnackbarOpen(false)}
+                message={snackbarMessage}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            />
         </Container>
     );
 };

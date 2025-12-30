@@ -8,6 +8,26 @@ const MyBookingsPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [bookings, setBookings] = useState<any[]>([]);
 
+    // Load saved email from localStorage
+    React.useEffect(() => {
+        const savedUser = localStorage.getItem('bookMyShowUser');
+        if (savedUser) {
+            try {
+                const { email: savedEmail } = JSON.parse(savedUser);
+                if (savedEmail) {
+                    setEmail(savedEmail);
+                    // Auto-fetch bookings if email is available
+                    setTimeout(() => {
+                        const btn = document.getElementById('fetch-bookings-btn');
+                        btn?.click();
+                    }, 100);
+                }
+            } catch (e) {
+                console.error('Failed to parse saved user data');
+            }
+        }
+    }, []);
+
     const handleFetch = async () => {
         if (!email) return;
         setLoading(true);
@@ -38,7 +58,7 @@ const MyBookingsPage: React.FC = () => {
                         size="small"
                         sx={{ minWidth: 280 }}
                     />
-                    <Button variant="contained" onClick={handleFetch} disabled={loading || !email}>
+                    <Button variant="contained" onClick={handleFetch} disabled={loading || !email} id="fetch-bookings-btn">
                         {loading ? 'Loading...' : 'Fetch'}
                     </Button>
                 </Box>
