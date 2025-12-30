@@ -4,7 +4,7 @@ A comprehensive movie ticket booking system built with modern technologies, desi
 
 ## 📋 Project Overview
 
-This project implements a simplified version of BookMyShow with core movie ticket booking functionality. It's designed as a learning project for a 2-year experienced SDE-1, with intentional design gaps for educational discussions about scalability, performance, and best practices.
+This project implements a simplified version of BookMyShow with core movie ticket booking functionality.
 
 ## 🎯 Key Features Implemented
 
@@ -213,23 +213,6 @@ This project demonstrates:
 - **Security best practices** with input validation and rate limiting
 - **System design thinking** with intentional scalability discussions
 
-## 📝 Assessment Criteria
-
-### For SDE-1 Evaluation
-1. **Code Quality**: Clean, readable, well-documented code
-2. **Architecture Understanding**: Proper separation of concerns
-3. **Problem-Solving**: Handling edge cases and error scenarios
-4. **Scalability Awareness**: Identifying bottlenecks and solutions
-5. **Security Mindset**: Understanding security implications
-6. **Testing Approach**: Test-driven development practices
-
-### For Mentor Review
-1. **Design Decisions**: Rationale behind technology choices
-2. **Trade-offs**: Understanding of architectural trade-offs
-3. **Improvement Opportunities**: Ability to identify enhancement areas
-4. **Best Practices**: Knowledge of industry standards
-5. **Performance Considerations**: Optimization strategies
-6. **Operational Readiness**: Production deployment considerations
 
 ## 🏆 Project Completion Status
 
@@ -249,6 +232,3 @@ This project demonstrates:
 **Completion Date**: December 2025  
 
 ---
-
-
-*This project serves as a comprehensive learning experience in full-stack development, system design, and software engineering best practices. The intentional design limitations provide opportunities for meaningful discussions about scalability, performance, and production-ready systems.*
