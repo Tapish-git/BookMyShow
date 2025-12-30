@@ -156,6 +156,10 @@ const createBooking = asyncHandler(async (req, res) => {
     }
 
     // Create the booking
+    console.log('\n=== 📋 CREATE BOOKING - START ===');
+    console.log('Request data:', { showId, seatIds, userDetails });
+    console.log('Booking data to create:', { total_seats: seatIds.length, total_amount: totalAmount, user_email: email });
+
     const bookingData = {
       show_id: showId,
       user_email: email,
@@ -168,6 +172,7 @@ const createBooking = asyncHandler(async (req, res) => {
     };
 
     const booking = await Booking.create(bookingData, { transaction });
+    console.log('✓ Booking created:', { id: booking.id, reference: booking.booking_reference, total_amount: booking.total_amount });
 
     // Confirm all seat reservations
     const confirmedSeats = [];

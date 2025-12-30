@@ -279,7 +279,7 @@ Show.associate = (models) => {
  * @param {number} seatChange - Number of seats to add/subtract (negative to reduce)
  * @returns {Promise<Show>} Updated show instance
  */
-Show.prototype.updateAvailableSeats = async function(seatChange) {
+Show.prototype.updateAvailableSeats = async function(seatChange, options = {}) {
   const newAvailableCount = this.available_seats + seatChange;
   
   if (newAvailableCount < 0) {
@@ -291,7 +291,7 @@ Show.prototype.updateAvailableSeats = async function(seatChange) {
   }
   
   this.available_seats = newAvailableCount;
-  return await this.save();
+  return await this.save({ transaction: options.transaction });
 };
 
 /**
