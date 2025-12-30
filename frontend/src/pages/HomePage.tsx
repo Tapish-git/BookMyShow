@@ -106,12 +106,94 @@ const HomePage: React.FC = () => {
     };
 
     const bannerMovies = movies.slice(0, 3);
-    const resolvePoster = (url?: string) => {
-        if (!url || url.includes('placeholder-movie.jpg')) {
-            return 'https://placehold.co/1200x500/000000/FFFFFF?text=Featured+Movie';
+    
+    // Movie poster mapping - comprehensive list with IMDb posters
+    const moviePosters: { [key: string]: { poster: string; banner: string } } = {
+        // Case-insensitive lookup helper
+        'avengers endgame': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BMTc5MDE2ODcwNV5BMl5BanBnXkFtZTgwMzI2NzQ2NzM@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BMTc5MDE2ODcwNV5BMl5BanBnXkFtZTgwMzI2NzQ2NzM@._V1_.jpg'
+        },
+        'the batman': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BM2MyNTAwZGEtNTAxNC00ODVjLTgzZjUtYmU0YjAzNmQyZDEwXkEyXkFqcGdeQXVyNDc2NTg3NzA@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BM2MyNTAwZGEtNTAxNC00ODVjLTgzZjUtYmU0YjAzNmQyZDEwXkEyXkFqcGdeQXVyNDc2NTg3NzA@._V1_.jpg'
+        },
+        'spider-man no way home': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BZWMyYzFjYTYtNTRjYi00OGExLWE2YzgtOGRmYjAxZTU3NzBiXkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BZWMyYzFjYTYtNTRjYi00OGExLWE2YzgtOGRmYjAxZTU3NzBiXkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_.jpg'
+        },
+        'rrr': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BODUwNDNjYzctODUxNy00ZTA2LWIyYTEtMDc5Y2E5ZjBmNTMzXkEyXkFqcGdeQXVyODE5NzE3OTE@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BODUwNDNjYzctODUxNy00ZTA2LWIyYTEtMDc5Y2E5ZjBmNTMzXkEyXkFqcGdeQXVyODE5NzE3OTE@._V1_.jpg'
+        },
+        'dangal': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BMTQ4MzQzMzM2Nl5BMl5BanBnXkFtZTgwMTQ1NzU3MDI@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BMTQ4MzQzMzM2Nl5BMl5BanBnXkFtZTgwMTQ1NzU3MDI@._V1_.jpg'
+        },
+        '3 idiots': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BNTkyOGVjMGEtNmQzZi00NzFlLTlhOWQtODYyMDc2ZGJmYzFhXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BNTkyOGVjMGEtNmQzZi00NzFlLTlhOWQtODYyMDc2ZGJmYzFhXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg'
+        },
+        'bahubali 2': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BYTMxMmQ0ZDgtYzJhZC00NTA4LWFiMzYtMWRkYTZiNTdhNmI0XkEyXkFqcGdeQXVyODE5NzE3OTE@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BYTMxMmQ0ZDgtYzJhZC00NTA4LWFiMzYtMWRkYTZiNTdhNmI0XkEyXkFqcGdeQXVyODE5NzE3OTE@._V1_.jpg'
+        },
+        'zindagi na milegi dobara': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BMTQxMzI5MTQ0Ml5BMl5BanBnXkFtZTcwNTc1MDQ0NQ@@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BMTQxMzI5MTQ0Ml5BMl5BanBnXkFtZTcwNTc1MDQ0NQ@@._V1_.jpg'
+        },
+        'the dark knight': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_.jpg'
+        },
+        'inception': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg'
+        },
+        'the matrix': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg'
+        },
+        'interstellar': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg'
         }
-        return url;
     };
+    
+    // Helper to resolve poster URL with real movie posters
+    const resolvePoster = (url?: string, movieTitle?: string) => {
+        // Try to find poster by movie title (case-insensitive, remove special chars)
+        if (movieTitle) {
+            const normalizedTitle = movieTitle.toLowerCase().replace(/[:\-]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (moviePosters[normalizedTitle]) {
+                return moviePosters[normalizedTitle].poster;
+            }
+        }
+        // If URL is valid and not a placeholder, use it
+        if (url && !url.includes('placeholder') && !url.includes('example.com')) {
+            return url;
+        }
+        // Fallback to a solid color gradient
+        return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='600' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3E${encodeURIComponent(movieTitle || 'Movie')}%3C/text%3E%3C/svg%3E`;
+    };
+    
+    // Helper for banner images (wider format)
+    const resolveBannerImage = (url?: string, movieTitle?: string) => {
+        // Try to find banner by movie title (case-insensitive, remove special chars)
+        if (movieTitle) {
+            const normalizedTitle = movieTitle.toLowerCase().replace(/[:\-]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (moviePosters[normalizedTitle]) {
+                return moviePosters[normalizedTitle].banner;
+            }
+        }
+        // If URL is valid and not a placeholder, use it
+        if (url && !url.includes('placeholder') && !url.includes('example.com')) {
+            return url;
+        }
+        // Fallback to a solid color gradient
+        return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='500'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1200' height='500' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='48' fill='white' text-anchor='middle' dominant-baseline='middle'%3E${encodeURIComponent(movieTitle || 'Movie')}%3C/text%3E%3C/svg%3E`;
+    };
+    
     const currentMovie = bannerMovies[currentBanner];
 
     return (
@@ -122,7 +204,7 @@ const HomePage: React.FC = () => {
                     sx={{
                         position: 'relative',
                         height: { xs: '400px', md: '500px' },
-                        background: `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${resolvePoster(currentMovie.poster_url)})`,
+                        background: `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${resolveBannerImage(currentMovie.poster_url, currentMovie.title)})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         display: 'flex',
@@ -357,7 +439,7 @@ const HomePage: React.FC = () => {
                                     <CardMedia
                                         component="img"
                                         height="350"
-                                        image={resolvePoster(movie.poster_url)}
+                                        image={resolvePoster(movie.poster_url, movie.title)}
                                         alt={movie.title}
                                         sx={{ objectFit: 'cover' }}
                                     />
