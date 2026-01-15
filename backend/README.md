@@ -340,3 +340,6 @@ This project is for educational purposes and demonstration of backend developmen
 ---
 
 **Note**: This is a learning project designed to demonstrate backend development concepts. The intentional limitations and improvement opportunities are documented throughout the codebase for educational discussion.
+
+
+<!-- Hosting this on my local laptop  -->
