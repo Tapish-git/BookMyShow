@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Box, 
-    Typography, 
-    Container, 
-    Grid, 
-    Card, 
-    CardMedia, 
-    CardContent, 
+import {
+    Box,
+    Typography,
+    Container,
+    Grid,
+    Card,
+    CardMedia,
+    CardContent,
     Button,
     Chip,
     Stack,
@@ -14,9 +14,9 @@ import {
     alpha
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Star, 
-    ChevronLeft, 
+import {
+    Star,
+    ChevronLeft,
     ChevronRight,
     LocalActivity,
     MovieFilter,
@@ -100,7 +100,7 @@ const HomePage: React.FC = () => {
     };
 
     const bannerMovies = movies.slice(0, 3);
-    
+
     // Movie poster mapping - comprehensive list with IMDb posters
     const moviePosters: { [key: string]: { poster: string; banner: string } } = {
         // Case-insensitive lookup helper
@@ -112,7 +112,7 @@ const HomePage: React.FC = () => {
             poster: 'https://m.media-amazon.com/images/M/MV5BM2MyNTAwZGEtNTAxNC00ODVjLTgzZjUtYmU0YjAzNmQyZDEwXkEyXkFqcGdeQXVyNDc2NTg3NzA@._V1_SX300.jpg',
             banner: 'https://m.media-amazon.com/images/M/MV5BM2MyNTAwZGEtNTAxNC00ODVjLTgzZjUtYmU0YjAzNmQyZDEwXkEyXkFqcGdeQXVyNDc2NTg3NzA@._V1_.jpg'
         },
-        'spider-man no way home': {
+        'spider man no way home': {
             poster: 'https://m.media-amazon.com/images/M/MV5BZWMyYzFjYTYtNTRjYi00OGExLWE2YzgtOGRmYjAxZTU3NzBiXkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_SX300.jpg',
             banner: 'https://m.media-amazon.com/images/M/MV5BZWMyYzFjYTYtNTRjYi00OGExLWE2YzgtOGRmYjAxZTU3NzBiXkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_.jpg'
         },
@@ -151,9 +151,26 @@ const HomePage: React.FC = () => {
         'interstellar': {
             poster: 'https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg',
             banner: 'https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg'
+        },
+        // New movies added
+        'oppenheimer': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BMDBmYTZjNjUtN2M1MS00MTQ2LTk2ODgtNzc2M2QyZGE5NTVjXkEyXkFqcGdeQXVyNzAwMjU2MTY@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BMDBmYTZjNjUtN2M1MS00MTQ2LTk2ODgtNzc2M2QyZGE5NTVjXkEyXkFqcGdeQXVyNzAwMjU2MTY@._V1_.jpg'
+        },
+        'dune part two': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BN2QyZGU4ZDctOWMzMy00NTc5LThlOGQtODhmNDI1NmY5YzAwXkEyXkFqcGdeQXVyMDM2NDM2MQ@@._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BN2QyZGU4ZDctOWMzMy00NTc5LThlOGQtODhmNDI1NmY5YzAwXkEyXkFqcGdeQXVyMDM2NDM2MQ@@._V1_.jpg'
+        },
+        'jawan': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BNDYxOWM0OTMtMzJkNy00M2JhLTg4MTktZGE0NDI3MjYwNGYzXkEyXkFqcGdeQXVyMTUzNTgzNzM0._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BNDYxOWM0OTMtMzJkNy00M2JhLTg4MTktZGE0NDI3MjYwNGYzXkEyXkFqcGdeQXVyMTUzNTgzNzM0._V1_.jpg'
+        },
+        'pushpa 2 the rule': {
+            poster: 'https://m.media-amazon.com/images/M/MV5BYThmYjJhMGItYzAyYS00YjQzLWFiOTUtNWM1NmIxMjYxNDM5XkEyXkFqcGdeQXVyMTUzNjMxNjE2._V1_SX300.jpg',
+            banner: 'https://m.media-amazon.com/images/M/MV5BYThmYjJhMGItYzAyYS00YjQzLWFiOTUtNWM1NmIxMjYxNDM5XkEyXkFqcGdeQXVyMTUzNjMxNjE2._V1_.jpg'
         }
     };
-    
+
     // Helper to resolve poster URL with real movie posters
     const resolvePoster = (url?: string, movieTitle?: string) => {
         // Try to find poster by movie title (case-insensitive, remove special chars)
@@ -170,7 +187,7 @@ const HomePage: React.FC = () => {
         // Fallback to a solid color gradient
         return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='600' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3E${encodeURIComponent(movieTitle || 'Movie')}%3C/text%3E%3C/svg%3E`;
     };
-    
+
     // Helper for banner images (wider format)
     const resolveBannerImage = (url?: string, movieTitle?: string) => {
         // Try to find banner by movie title (case-insensitive, remove special chars)
@@ -187,7 +204,7 @@ const HomePage: React.FC = () => {
         // Fallback to a solid color gradient
         return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='500'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1200' height='500' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='48' fill='white' text-anchor='middle' dominant-baseline='middle'%3E${encodeURIComponent(movieTitle || 'Movie')}%3C/text%3E%3C/svg%3E`;
     };
-    
+
     const currentMovie = bannerMovies[currentBanner];
 
     return (
@@ -412,7 +429,7 @@ const HomePage: React.FC = () => {
                 >
                     Recommended Movies
                 </Typography>
-                
+
                 <Grid container spacing={3}>
                     {movies.map((movie) => (
                         <Grid item xs={12} sm={6} md={4} lg={3} key={movie.id}>
