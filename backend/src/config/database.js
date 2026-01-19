@@ -12,7 +12,7 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 /**
- * Parse DATABASE_URL if provided (for Railway, Heroku, etc.)
+ * Parse DATABASE_URL if provided (for Render, Aiven, Heroku, etc.)
  * Format: mysql://username:password@host:port/database
  */
 function parseDatabaseUrl(url) {
@@ -78,7 +78,7 @@ const config = {
     },
   },
   production: {
-    // Use DATABASE_URL if provided (Railway, Heroku), otherwise use individual vars
+    // Use DATABASE_URL if provided (Render/Aiven), otherwise use individual vars
     username: databaseUrl?.username || process.env.DB_USER,
     password: databaseUrl?.password || process.env.DB_PASSWORD,
     database: databaseUrl?.database || process.env.DB_NAME,
@@ -92,10 +92,10 @@ const config = {
       acquire: 60000,
       idle: 10000,
     },
-    dialectOptions: databaseUrl?.host?.includes('railway.internal') ? {} : {
+    dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false, // For cloud databases
+        rejectUnauthorized: false, // For Aiven and other cloud databases
       },
     },
   },
