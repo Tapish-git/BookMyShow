@@ -59,7 +59,6 @@ const SeatSelectionPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [blockedSeatIds, setBlockedSeatIds] = useState<string[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null); // seconds
-    const [blockExpiry, setBlockExpiry] = useState<string | null>(null);
     const [bookingInProgress, setBookingInProgress] = useState(false);
     const [showUserDialog, setShowUserDialog] = useState(false);
     const [userName, setUserName] = useState('');
@@ -141,7 +140,6 @@ const SeatSelectionPage: React.FC = () => {
                 } finally {
                     setBlockedSeatIds([]);
                     setSelectedSeats([]);
-                    setBlockExpiry(null);
                     setCountdown(null);
                     // Refresh seat layout to reflect availability
                     if (showId) {
@@ -174,8 +172,6 @@ const SeatSelectionPage: React.FC = () => {
 
         // Start session countdown on first selection (5 mins)
         if (countdown === null) {
-            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-            setBlockExpiry(expiresAt);
             setCountdown(5 * 60);
         }
     };
