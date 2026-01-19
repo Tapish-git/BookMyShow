@@ -32,8 +32,10 @@ import {
 
 // API Configuration
 const MODE = import.meta.env.MODE;
-const API_BASE_URL = MODE === 'production'
-  ? '/api/v1' // Use Vite proxy to local backend in development
+// In PRODUCTION: Use VITE_API_BASE_URL from Vercel env vars (or fallback to Render URL)
+// In DEVELOPMENT: Use relative /api/v1 which is proxied by Vite to local backend
+const API_BASE_URL = MODE === 'development'
+  ? '/api/v1'
   : (import.meta.env.VITE_API_BASE_URL || "https://bookmyshow-backend-gwc2.onrender.com/api/v1");
 console.log("API BASE URL:", API_BASE_URL, "MODE:", MODE);
 const REQUEST_TIMEOUT = 10000; // 10 seconds
