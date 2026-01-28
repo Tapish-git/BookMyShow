@@ -82,41 +82,52 @@ const SeatSelectionPage: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
-        const fetchShowAndSeats = async () => {
-            if (!showId) return;
+    const fetchShowAndSeats = async () => {
+        if (!showId) return;
 
-            try {
-                console.log('🎬 Fetching show and seats for:', showId);
+        try {
+            console.log('🎬 Fetching show and seats for:', showId);
 
-                // Fetch show details
-                const showResponse = await showApi.getShowById(showId);
-                console.log('✅ Show fetched:', showResponse);
-                setShow(showResponse);
+            // Fetch show details
+            const showResponse = await showApi.getShowById(showId);
+            console.log('✅ Show fetched:', showResponse);
+            setShow(showResponse);
 
-                // Fetch seat layout
-                const seatsResponse = await seatApi.getSeatLayout(showId);
-                console.log('✅ Seats fetched:', seatsResponse);
+            // Fetch seat layout
+            const seatsResponse = await seatApi.getSeatLayout(showId);
+            console.log('✅ Seats fetched:', seatsResponse);
 
-                // Transform seatLayout object into flat array
-                const seatsArray: Seat[] = [];
-                if (seatsResponse.seatLayout) {
-                    Object.entries(seatsResponse.seatLayout).forEach(([rowName, rowSeats]) => {
-                        rowSeats.forEach(seat => seatsArray.push(normalizeSeat(rowName, seat, seatsResponse.show.price)));
-                    });
-                }
-                setSeats(seatsArray);
-
-                setError(null);
-            } catch (err: any) {
-                console.error('❌ Error fetching show/seats:', err);
-                setError(err?.error?.message || 'Failed to load seats');
-            } finally {
-                setLoading(false);
+            // Transform seatLayout object into flat array
+            const seatsArray: Seat[] = [];
+            if (seatsResponse.seatLayout) {
+                Object.entries(seatsResponse.seatLayout).forEach(([rowName, rowSeats]) => {
+                    rowSeats.forEach(seat => seatsArray.push(normalizeSeat(rowName, seat, seatsResponse.show.price)));
+                });
             }
-        };
+            setSeats(seatsArray);
 
+            setError(null);
+        } catch (err: any) {
+            console.error('❌ Error fetching show/seats:', err);
+            setError(err?.error?.message || 'Failed to load seats');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchShowAndSeats();
+    }, [showId]);
+
+    // Poll seat layout so blocked seats appear to other users
+    useEffect(() => {
+        if (!showId) return;
+
+        const interval = setInterval(() => {
+            fetchShowAndSeats();
+        }, 3000);
+
+        return () => clearInterval(interval);
     }, [showId]);
 
     // Countdown tick
@@ -160,19 +171,53 @@ const SeatSelectionPage: React.FC = () => {
         releaseOnExpiry();
     }, [countdown]);
 
+    // Release any blocked seats if user leaves the page
+    useEffect(() => {
+        return () => {
+            if (blockedSeatIds.length > 0) {
+                seatApi.releaseSeats(blockedSeatIds).catch(() => undefined);
+            }
+        };
+    }, [blockedSeatIds]);
+
     const handleSeatClick = async (seatId: string, seatStatus: string) => {
+        if (!showId) return;
+
+        const isSelected = selectedSeats.includes(seatId);
+        if (isSelected) {
+            // Release immediately on deselect
+            try {
+                await seatApi.releaseSeats([seatId]);
+            } catch (err) {
+                console.error('❌ Failed to release seat:', err);
+            }
+
+            setSelectedSeats(prev => prev.filter(id => id !== seatId));
+            setBlockedSeatIds(prev => prev.filter(id => id !== seatId));
+
+            if (selectedSeats.length === 1) {
+                setCountdown(null);
+            }
+            return;
+        }
+
         if (seatStatus !== 'available') return;
 
-        setSelectedSeats(prev => {
-            const next = prev.includes(seatId)
-                ? prev.filter(id => id !== seatId)
-                : [...prev, seatId];
-            return next;
-        });
+        // Block immediately on select
+        try {
+            await seatApi.blockSeats({ showId, seatIds: [seatId], blockDuration: 5 });
+            setSelectedSeats(prev => [...prev, seatId]);
+            setBlockedSeatIds(prev => [...prev, seatId]);
 
-        // Start session countdown on first selection (5 mins)
-        if (countdown === null) {
-            setCountdown(5 * 60);
+            // Start session countdown on first selection (5 mins)
+            if (countdown === null) {
+                setCountdown(5 * 60);
+            }
+        } catch (err: any) {
+            console.error('❌ Seat block failed:', err);
+            setSnackbarMessage(err?.error?.message || 'Seat just got blocked by another user. Refreshing...');
+            setSnackbarOpen(true);
+            await fetchShowAndSeats();
         }
     };
 
@@ -207,12 +252,15 @@ const SeatSelectionPage: React.FC = () => {
         setBookingInProgress(true);
 
         try {
-            // Block all selected seats at once before booking
-            setSnackbarMessage('Blocking seats...');
-            setSnackbarOpen(true);
-            
-            await seatApi.blockSeats({ showId, seatIds: selectedSeats, blockDuration: 5 });
-            setBlockedSeatIds(selectedSeats);
+            // Ensure any unblocked selected seats are blocked before booking
+            const seatsToBlock = selectedSeats.filter(id => !blockedSeatIds.includes(id));
+            if (seatsToBlock.length > 0) {
+                setSnackbarMessage('Blocking seats...');
+                setSnackbarOpen(true);
+
+                await seatApi.blockSeats({ showId, seatIds: seatsToBlock, blockDuration: 5 });
+                setBlockedSeatIds(prev => [...prev, ...seatsToBlock]);
+            }
 
             // Create booking immediately and navigate to confirmation
             setSnackbarMessage('Creating booking...');
